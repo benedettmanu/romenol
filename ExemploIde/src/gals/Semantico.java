@@ -369,22 +369,38 @@ public class Semantico implements Constants {
                 processOperatorExpression(SemanticTable.MUL);
                 break;
 
-            case 74: // <Expr9> ::= <UnOp> <Expr10> #74
-                int type = typeStack.pop();
-                int op = operatorStack.pop();
-
-                boolean valid = false;
-                if (op == SemanticTable.SUB) {
-                    valid = (type == SemanticTable.INT || type == SemanticTable.FLO);
+                case 74: // <Expr9> ::= <UnOp> <Expr10> #74
+                {
+                    int type = typeStack.pop();
+                    int op = operatorStack.pop();
+                
+                    boolean valid = false;
+                    switch(op) {
+                        case SemanticTable.SUB:
+                            valid = (type == SemanticTable.INT || type == SemanticTable.FLO);
+                            break;
+                        case SemanticTable.BNOT:
+                            valid = (type == SemanticTable.INT);
+                            break;
+                        case SemanticTable.LNOT:
+                            valid = (type == SemanticTable.BOO);
+                            break;
+                        case SemanticTable.BAND:
+                            valid = (type == SemanticTable.INT);
+                            break;
+                        default:
+                            valid = false;
+                            break;
+                    }
+                
+                    if (!valid) {
+                        throw new SemanticError("Operador unário incompatível com o tipo " +
+                                getTypeName(type), token.getPosition());
+                    }
+                
+                    typeStack.push(type);
                 }
-
-                if (!valid) {
-                    throw new SemanticError("Operador unário incompatível com o tipo " +
-                            getTypeName(type), token.getPosition());
-                }
-
-                typeStack.push(type);
-                break;
+                break;                
 
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
                 if (symbolTable.isArray()) {
