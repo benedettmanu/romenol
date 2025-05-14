@@ -42,6 +42,8 @@ EXPORT  = ID : "exporta"
 BOOL = ID : "bool"
 VOID = ID : "void"
 VETOR = ID : "vector"
+TRUE = ID : "true"
+FALSE = ID : "false"
 SOMA : "+"
 DIMINUICAO : "-"
 MULTIPLICACAO : "*"
@@ -271,6 +273,8 @@ PARENTESES_ESQUERDO : "("
           | LITERAL_STRING_CARACTER #76
           | LITERAL_CARACTER #77
           | LITERAL_REAL #78
+          | TRUE #102
+          | FALSE #103
           | ID #79
           | ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
           | PARENTESES_ESQUERDO <Expr> #82 PARENTESES_DIREITO #83

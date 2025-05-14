@@ -191,6 +191,11 @@ public class SymbolTable {
         System.out.println("Array adicionado à tabela de símbolos: " + entry);
     }
 
+    public boolean alreadyDeclared(String id) {
+        String key = id + "@" + currentScope;
+        return table.containsKey(key);
+    }
+
     public SymbolEntry lookup(String id, String scope) {
         String key = id + "@" + scope;
         if (table.containsKey(key)) {

@@ -9,6 +9,7 @@ public class Semantico implements Constants {
     private final Stack<Integer> typeStack = new Stack<>();
     private final Stack<String> identifierStack = new Stack<>();
     private final Stack<Integer> positionStack = new Stack<>();
+    private final Stack<Integer> operatorStack = new Stack<>();
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
@@ -70,6 +71,22 @@ public class Semantico implements Constants {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+
+                    int varType = symbolTable.lookup(id, symbolTable.getCurrentScope()).getType();
+                    int exprType = typeStack.pop();
+
+                    int resultType = SemanticTable.atribType(varType, exprType);
+                    if (resultType == SemanticTable.ERR) {
+                        throw new SemanticError("Tipos incompatíveis na atribuição para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo da expressão: " + getTypeName(exprType), position);
+                    } else if (resultType == SemanticTable.WAR) {
+                        System.out.println("AVISO: Possível perda de precisão na atribuição para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo da expressão: " + getTypeName(exprType) +
+                                " (linha/posição: " + position + ")");
+                    }
+
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
                 inAssignmentContext = false;
@@ -81,6 +98,26 @@ public class Semantico implements Constants {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+
+                    int varType = symbolTable.lookup(id, symbolTable.getCurrentScope()).getType();
+                    int exprType = typeStack.pop();
+                    int op = operatorStack.isEmpty() ? SemanticTable.SUM : operatorStack.pop();
+
+                    int resultType = SemanticTable.resultType(varType, exprType, op);
+                    if (resultType == SemanticTable.ERR) {
+                        throw new SemanticError("Operação incompatível para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo da expressão: " + getTypeName(exprType) +
+                                ", Operador: " + getOperatorName(op), position);
+                    }
+
+                    int atribResult = SemanticTable.atribType(varType, resultType);
+                    if (atribResult == SemanticTable.ERR) {
+                        throw new SemanticError("Tipos incompatíveis na atribuição composta para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo resultante: " + getTypeName(resultType), position);
+                    }
+
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
@@ -93,6 +130,26 @@ public class Semantico implements Constants {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+
+                    int varType = symbolTable.lookup(id, symbolTable.getCurrentScope()).getType();
+                    int exprType = typeStack.pop();
+                    int op = operatorStack.isEmpty() ? SemanticTable.MUL : operatorStack.pop();
+
+                    int resultType = SemanticTable.resultType(varType, exprType, op);
+                    if (resultType == SemanticTable.ERR) {
+                        throw new SemanticError("Operação incompatível para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo da expressão: " + getTypeName(exprType) +
+                                ", Operador: " + getOperatorName(op), position);
+                    }
+
+                    int atribResult = SemanticTable.atribType(varType, resultType);
+                    if (atribResult == SemanticTable.ERR) {
+                        throw new SemanticError("Tipos incompatíveis na atribuição composta para '" + id +
+                                "'. Tipo da variável: " + getTypeName(varType) +
+                                ", Tipo resultante: " + getTypeName(resultType), position);
+                    }
+
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
@@ -125,7 +182,7 @@ public class Semantico implements Constants {
                 break;
 
             case 15: // COLCHETE_DIREITO #15
-                if (!identifierStack.isEmpty() && symbolTable.isArray()) {
+                if (!identifierStack.isEmpty() && symbolTable.isArray() && inDeclarationContext) {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
                     try {
@@ -136,14 +193,15 @@ public class Semantico implements Constants {
                 }
                 break;
 
-            case 16: // <ArrayIDList> ::= <Variable> #16 | <ArrayIDList> VIRGULA <Variable> #16
+            case 16: // <ArrayIDList> ::= <Variable> #16 | <ArrayIDList> , <Variable> #16
                 if (!identifierStack.isEmpty()) {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
-
                     try {
                         if (symbolTable.isArray()) {
-                            symbolTable.addArray(id, position);
+                            if (!symbolTable.alreadyDeclared(id)) {
+                                symbolTable.addArray(id, position);
+                            }
                         } else {
                             symbolTable.addSymbol(id, SymbolTable.VARIABLE, position);
                         }
@@ -169,9 +227,19 @@ public class Semantico implements Constants {
                 break;
 
             case 21: // SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22
+                int exprType = typeStack.pop();
+                if (exprType != SemanticTable.BOO) {
+                    throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
+                            getTypeName(exprType), token.getPosition());
+                }
                 break;
 
             case 26: // ENQUANTO PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27
+                exprType = typeStack.pop();
+                if (exprType != SemanticTable.BOO) {
+                    throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
+                            getTypeName(exprType), token.getPosition());
+                }
                 break;
 
             case 39: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
@@ -181,6 +249,13 @@ public class Semantico implements Constants {
 
             case 41: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42
                 verifyArrayDeclared(token.getLexeme(), token.getPosition());
+
+                int indexType = typeStack.pop();
+                if (indexType != SemanticTable.INT) {
+                    throw new SemanticError("Índice de array deve ser do tipo inteiro, encontrado: " +
+                            getTypeName(indexType), token.getPosition());
+                }
+
                 symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
                 break;
 
@@ -197,8 +272,14 @@ public class Semantico implements Constants {
                 id = token.getLexeme();
                 position = token.getPosition();
                 verifyArrayDeclared(id, position);
-                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
 
+                indexType = typeStack.pop();
+                if (indexType != SemanticTable.INT) {
+                    throw new SemanticError("Índice de array deve ser do tipo inteiro, encontrado: " +
+                            getTypeName(indexType), token.getPosition());
+                }
+
+                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                 checkIfInitialized(id, position);
                 break;
 
@@ -248,6 +329,59 @@ public class Semantico implements Constants {
                 symbolTable.markAsUsed(token.getLexeme(), "global");
                 break;
 
+            case 65: // <Expr> ::= <Expr> OU_LOGICO <Expr1> #65
+                processOperatorExpression(SemanticTable.LOR);
+                break;
+
+            case 66: // <Expr1> ::= <Expr1> E_LOGICO <Expr2> #66
+                processOperatorExpression(SemanticTable.LAND);
+                break;
+
+            case 67: // <Expr2> ::= <Expr2> OU_BIT <Expr3> #67
+                processOperatorExpression(SemanticTable.BOR);
+                break;
+
+            case 68: // <Expr3> ::= <Expr3> XOR_BIT <Expr4> #68
+                processOperatorExpression(SemanticTable.XOR);
+                break;
+
+            case 69: // <Expr4> ::= <Expr4> E_BIT <Expr5> #69
+                processOperatorExpression(SemanticTable.BAND);
+                break;
+
+            case 70: // <Expr5> ::= <Expr5> <RelOp> <Expr6> #70
+                processOperatorExpression(SemanticTable.REL);
+                break;
+
+            case 71: // <Expr6> ::= <Expr6> <ShiftOp> <Expr7> #71
+                processOperatorExpression(SemanticTable.SHL);
+                break;
+
+            case 72: // <Expr7> ::= <Expr7> <AddOp> <Expr8> #72
+                processOperatorExpression(SemanticTable.SUM);
+                break;
+
+            case 73: // <Expr8> ::= <Expr8> <MulOp> <Expr9> #73
+                processOperatorExpression(SemanticTable.MUL);
+                break;
+
+            case 74: // <Expr9> ::= <UnOp> <Expr10> #74
+                int type = typeStack.pop();
+                int op = operatorStack.pop();
+
+                boolean valid = false;
+                if (op == SemanticTable.SUB) {
+                    valid = (type == SemanticTable.INT || type == SemanticTable.FLO);
+                }
+
+                if (!valid) {
+                    throw new SemanticError("Operador unário incompatível com o tipo " +
+                            getTypeName(type), token.getPosition());
+                }
+
+                typeStack.push(type);
+                break;
+
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
                 if (symbolTable.isArray()) {
                     try {
@@ -286,6 +420,13 @@ public class Semantico implements Constants {
             case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
                 id = token.getLexeme();
                 position = token.getPosition();
+
+                indexType = typeStack.pop();
+                if (indexType != SemanticTable.INT) {
+                    throw new SemanticError("Índice de array deve ser do tipo inteiro, encontrado: " +
+                            getTypeName(indexType), token.getPosition());
+                }
+
                 verifyArrayDeclaredAndPushType(id, position);
 
                 if (!inAssignmentContext) {
@@ -294,8 +435,25 @@ public class Semantico implements Constants {
                 }
                 break;
 
+            case 82: // <Expr10> ::= PARENTESES_ESQUERDO <Expr> #82 PARENTESES_DIREITO #83
+                break;
+
+            case 84: // <Expr10> ::= <FunctionCall> #84
+                typeStack.push(SemanticTable.INT);
+                break;
+
+            case 85: // <RelOp> ::= MAIOR #85
+            case 86: // <RelOp> ::= MENOR #86
+            case 87: // <RelOp> ::= MAIOR_IGUAL #87
+            case 88: // <RelOp> ::= MENOR_IGUAL #88
+            case 89: // <RelOp> ::= IGUAL #89
+            case 90: // <RelOp> ::= DIFERENTE #90
+                operatorStack.push(SemanticTable.REL);
+                break;
+
             case 91: // <RelOp> ::= RESULTADO #91 (operador =)
                 inAssignmentContext = true;
+                operatorStack.push(SemanticTable.REL);
                 if (!identifierStack.isEmpty()) {
                     id = identifierStack.peek();
                     position = positionStack.peek();
@@ -303,9 +461,75 @@ public class Semantico implements Constants {
                 }
                 break;
 
+            case 92: // <UnOp> ::= DIMINUICAO #92
+                operatorStack.push(SemanticTable.SUB);
+                break;
+
+            case 93: // <UnOp> ::= NEGACAO_BIT #93
+                operatorStack.push(SemanticTable.BNOT);
+                break;
+
+            case 94: // <UnOp> ::= NEGACAO #94
+                operatorStack.push(SemanticTable.LNOT);
+                break;
+
+            case 95: // <ShiftOp> ::= SHIFT_ESQUERDA #95
+                operatorStack.push(SemanticTable.SHL);
+                break;
+            case 96: // <ShiftOp> ::= SHIFT_DIREITA #96
+                operatorStack.push(SemanticTable.SHR);
+                break;
+
+            case 97: // <AddOp> ::= SOMA #97
+                operatorStack.push(SemanticTable.SUM);
+                break;
+
+            case 98: // <AddOp> ::= DIMINUICAO #98
+                operatorStack.push(SemanticTable.SUB);
+                break;
+
+            case 99: // <MulOp> ::= MULTIPLICACAO #99
+                operatorStack.push(SemanticTable.MUL);
+                break;
+
+            case 100: // <MulOp> ::= DIVISAO #100
+                operatorStack.push(SemanticTable.DIV);
+                break;
+
+            case 101: // <MulOp> ::= MODULO #101
+                operatorStack.push(SemanticTable.MOD);
+                break;
+
+            case 102: // "true"
+                typeStack.push(SemanticTable.BOO);
+                break;
+
+            case 103: // "false"
+                typeStack.push(SemanticTable.BOO);
+                break;
+
             default:
                 break;
         }
+    }
+
+    private void processOperatorExpression(int operatorType) throws SemanticError {
+        if (typeStack.size() < 2) {
+            throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+        }
+
+        int type2 = typeStack.pop();
+        int type1 = typeStack.pop();
+        int op = operatorStack.isEmpty() ? operatorType : operatorStack.pop();
+
+        int resultType = SemanticTable.resultType(type1, type2, op);
+        if (resultType == SemanticTable.ERR) {
+            throw new SemanticError("Operação incompatível entre tipos " +
+                    getTypeName(type1) + " e " + getTypeName(type2) +
+                    " com operador " + getOperatorName(op), 0);
+        }
+
+        typeStack.push(resultType);
     }
 
     private void verifyIdentifierDeclared(String id, int position) throws SemanticError {
@@ -362,4 +586,53 @@ public class Semantico implements Constants {
                     "' (linha/posição: " + position + ")");
         }
     }
+
+    private String getTypeName(int type) {
+        switch (type) {
+            case SemanticTable.INT: return "INT";
+            case SemanticTable.FLO: return "FLOAT";
+            case SemanticTable.CHA: return "CHAR";
+            case SemanticTable.STR: return "STRING";
+            case SemanticTable.BOO: return "BOOL";
+            default: return "UNKNOWN";
+        }
+    }
+
+    private String getOperatorName(int op) {
+        switch (op) {
+            case SemanticTable.SUM:
+                return "SOMA"; // +
+            case SemanticTable.SUB:
+                return "SUBTRACAO"; // -
+            case SemanticTable.MUL:
+                return "MULTIPLICACAO"; // *
+            case SemanticTable.DIV:
+                return "DIVISAO"; // /
+            case SemanticTable.MOD:
+                return "MODULO"; // %
+            case SemanticTable.REL:
+                return "RELACIONAL"; // ==, !=, >, <, >=, <=, etc.
+            case SemanticTable.SHL:
+                return "DESLOCAMENTO_ESQUERDA"; // <<
+            case SemanticTable.SHR:
+                return "DESLOCAMENTO_DIREITA"; // >>
+            case SemanticTable.BOR:
+                return "OU_BIT_A_BIT"; // |
+            case SemanticTable.XOR:
+                return "XOR_BIT_A_BIT"; // ^
+            case SemanticTable.BAND:
+                return "E_BIT_A_BIT"; // &
+            case SemanticTable.LAND:
+                return "E_LOGICO"; // &&
+            case SemanticTable.LOR:
+                return "OU_LOGICO"; // ||
+            case SemanticTable.BNOT:
+                return "NEGACAO_BIT"; // ~
+            case SemanticTable.LNOT:
+                return "NEGACAO_LOGICA"; // !
+            default:
+                return "UNKNOWN";
+        }
+    }
+
 }

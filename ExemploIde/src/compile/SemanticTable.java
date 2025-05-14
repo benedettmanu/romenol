@@ -19,14 +19,24 @@ public class SemanticTable {
     public static final int STR = 3;
     public static final int BOO = 4;
 
-    public static final int SUM = 0;
-    public static final int SUB = 1;
-    public static final int MUL = 2;
-    public static final int DIV = 3;
-    public static final int REL = 4; // qualquer operador relacional
+    public static final int SUM    = 0;   // +
+    public static final int SUB    = 1;   // -
+    public static final int MUL    = 2;   // *
+    public static final int DIV    = 3;   // /
+    public static final int MOD    = 4;   // %
+    public static final int REL    = 5;   // ==, !=, >, <, >=, <=, &&, ||
+    public static final int SHL    = 6;   // <<
+    public static final int SHR    = 7;   // >>
+    public static final int BOR    = 8;   // |
+    public static final int XOR    = 9;   // ^
+    public static final int BAND   = 10;  // &
+    public static final int LAND   = 11;  // &&
+    public static final int LOR    = 12;  // ||
+    public static final int BNOT   = 13;  // ~
+    public static final int LNOT   = 14;  // !
 
     // TIPO DE RETORNO DAS EXPRESSOES ENTRE TIPOS
-    // 5 x 5 X 5  = TIPO X TIPO X OPER
+    // 5 x 5 X 15  = TIPO X TIPO X OPER
     static int expTable[][][] = {
             /*       INT       */
             {
@@ -80,11 +90,11 @@ public class SemanticTable {
             /*BOOL*/   {ERR, ERR, ERR, ERR, OK_}
     };
 
-    static int resultType (int TP1, int TP2, int OP){
+    public static int resultType (int TP1, int TP2, int OP){
         return (expTable[TP1][TP2][OP]);
     }
 
-    static int atribType (int TP1, int TP2){
+    public static int atribType (int TP1, int TP2){
         return (atribTable[TP1][TP2]);
     }
 }
