@@ -27,23 +27,57 @@ public class SemanticTable {
 
     // TIPO DE RETORNO DAS EXPRESSOES ENTRE TIPOS
     // 5 x 5 X 5  = TIPO X TIPO X OPER
-    static int expTable [][][] =
-            {/*       INT       */ /*       FLOAT     */ /*      CHAR       */ /*      STRING     */ /*     BOOL        */
-                    /*   INT*/ {{INT,INT,INT,FLO,BOO},{FLO,FLO,FLO,FLO,BOO},{ERR,ERR,ERR,ERR,ERR},{ERR,ERR,ERR,ERR,ERR},{ERR,ERR,ERR,ERR,ERR}},
-                    /* FLOAT*/ {{},{},{},{},{}},
-                    /*  CHAR*/ {{},{},{},{},{}},
-                    /*STRING*/ {{},{},{},{},{}},
-                    /*  BOOL*/ {{},{},{},{},{}}
-            };
+    static int expTable[][][] = {
+            /*       INT       */
+            {
+                    /* INT  */ {INT, INT, INT, FLO, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* FLOAT*/ {FLO, FLO, FLO, FLO, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* CHAR */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* STR  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* BOOL */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+            },
+            /*       FLOAT       */
+            {
+                    /* INT  */ {FLO, FLO, FLO, FLO, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* FLOAT*/ {FLO, FLO, FLO, FLO, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* CHAR */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* STR  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* BOOL */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+            },
+            /*       CHAR       */
+            {
+                    /* INT  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* FLOAT*/ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* CHAR */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* STR  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* BOOL */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+            },
+            /*       STR       */
+            {
+                    /* INT  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* FLOAT*/ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* CHAR */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* STR  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+                    /* BOOL */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, ERR},
+            },
+            /*       BOOL       */
+            {
+                    /* INT  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, OK_},
+                    /* FLOAT*/ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, OK_},
+                    /* CHAR */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, OK_},
+                    /* STR  */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, OK_},
+                    /* BOOL */ {ERR, ERR, ERR, ERR, ERR, BOO, ERR, ERR, ERR, ERR, ERR, BOO, BOO, ERR, OK_},
+            }
+    };
 
     // atribuicoes compativeis
     // 5 x 5 = TIPO X TIPO
     static int atribTable [][]={/* INT FLO CHA STR BOO  */
-            /*INT*/ {OK_,WAR,ERR,ERR,ERR},
-            /*FLO*/ {},
-            /*CHA*/ {},
-            /*STR*/ {},
-            /*BOO*/ {}
+            /*INT*/    {OK_, WAR, ERR, ERR, ERR},
+            /*FLOAT*/  {WAR, OK_, ERR, ERR, ERR},
+            /*CHAR*/   {ERR, ERR, OK_, ERR, ERR},
+            /*STRING*/ {ERR, ERR, ERR, OK_, ERR},
+            /*BOOL*/   {ERR, ERR, ERR, ERR, OK_}
     };
 
     static int resultType (int TP1, int TP2, int OP){
