@@ -87,6 +87,7 @@ public class Semantico implements Constants {
                                 " (linha/posição: " + position + ")");
                     }
 
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
                 inAssignmentContext = false;

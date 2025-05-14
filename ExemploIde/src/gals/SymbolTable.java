@@ -242,10 +242,12 @@ public class SymbolTable {
 
         for (List<SymbolEntry> entries : table.values()) {
             for (SymbolEntry entry : entries) {
-                if (!entry.isUsed() && entry.getModality() != FUNCTION) {
-                    System.out.println("AVISO: Identificador '" + entry.getId() +
-                            "' declarado mas não utilizado no escopo '" + entry.getScope() +
-                            "' (linha/posição: " + entry.getPosition() + ")");
+                if (!entry.isUsed()) {
+                    if (entry.getModality() == FUNCTION) {
+                        System.out.println("AVISO: Função '" + entry.getId() + "' declarada mas nunca chamada...");
+                    } else {
+                        System.out.println("AVISO: Identificador '" + entry.getId() + "' declarado mas não utilizado...");
+                    }
                     found = true;
                 }
             }
