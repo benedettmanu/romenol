@@ -21,8 +21,16 @@ public class MainWindow extends javax.swing.JFrame {
     private JButton buttonCompile;
     private JButton buttonDownloadDocs;
     private JLabel flagLabel;
+    private JLabel catLabel;
+    private JLabel sadCatLabel;
+    private JLabel sleepCatLabel;
     private JScrollPane scrollPaneSource;
     private JScrollPane scrollPaneConsole;
+    private CardLayout catCardLayout;
+    private JPanel catContainer;
+
+    private final int CAT_WIDTH = 64;
+    private final int CAT_HEIGHT = 64;
 
     public MainWindow() {
         initComponents();
@@ -35,19 +43,50 @@ public class MainWindow extends javax.swing.JFrame {
         setTitle("Romenol");
         setFont(new Font("Monospaced", Font.BOLD, 14));
 
+        Color rosa1 = new Color(255, 230, 244);
+        Color rosa2 = new Color(255, 182, 213);
+        Color rosa3 = new Color(255, 105, 180);
+        Color rosa4 = new Color(219, 112, 147);
+
         sourceInput = new JTextArea();
         console = new JTextArea();
         buttonCompile = new JButton("Compile");
         buttonDownloadDocs = new JButton("Documentation");
 
+        catLabel = new JLabel();
+        sadCatLabel = new JLabel();
+        sleepCatLabel = new JLabel();
+
+        catLabel.setVisible(false);
+        sadCatLabel.setVisible(false);
+        sleepCatLabel.setVisible(false);
+
+        try {
+            ImageIcon catIcon = loadAndResizeImage("/resources/pixel_cat.gif", CAT_WIDTH, CAT_HEIGHT);
+            catLabel.setIcon(catIcon);
+
+            ImageIcon sadCatIcon = loadAndResizeImage("/resources/sad_cat.gif", CAT_WIDTH, CAT_HEIGHT);
+            sadCatLabel.setIcon(sadCatIcon);
+
+            ImageIcon sleepCatIcon = loadAndResizeImage("/resources/sleep_cat.gif", CAT_WIDTH, CAT_HEIGHT);
+            sleepCatLabel.setIcon(sleepCatIcon);
+
+            catLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            sadCatLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            sleepCatLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar imagem do gatinho: " + e.getMessage());
+        }
+
         buttonCompile.setFont(new Font("Consolas", Font.PLAIN, 14));
-        buttonCompile.setBackground(new Color(54, 145, 80));
+        buttonCompile.setBackground(rosa3);
         buttonCompile.setForeground(Color.WHITE);
         buttonCompile.setFocusPainted(false);
         buttonCompile.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
 
         buttonDownloadDocs.setFont(new Font("Consolas", Font.PLAIN, 14));
-        buttonDownloadDocs.setBackground(new Color(130, 86, 141));
+        buttonDownloadDocs.setBackground(rosa4);
         buttonDownloadDocs.setForeground(Color.WHITE);
         buttonDownloadDocs.setFocusPainted(false);
         buttonDownloadDocs.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
@@ -57,12 +96,12 @@ public class MainWindow extends javax.swing.JFrame {
         Image scaledImage = originalImage.getScaledInstance(30, 18, Image.SCALE_SMOOTH);
         ImageIcon scaledIcon = new ImageIcon(scaledImage);
         flagLabel = new JLabel(scaledIcon);
-        flagLabel.setBorder(BorderFactory.createLineBorder(new Color(147, 163, 177), 1));
+        flagLabel.setBorder(BorderFactory.createLineBorder(rosa2, 1));
 
-        JLabel titleLabel = new JLabel("<html><div style='font-family: \"Monospaced\", cursive; font-size: 20px; font-weight: lighter; color: #dcdcdc;'>Romenol IDE</div></html>");
+        JLabel titleLabel = new JLabel("<html><div style='font-family: \"Monospaced\", cursive; font-size: 20px; font-weight: lighter; color: #FF69B4;'>Romenol IDE</div></html>");
 
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        titlePanel.setBackground(new Color(52, 55, 57));
+        titlePanel.setBackground(rosa1);
         titlePanel.add(flagLabel);
         titlePanel.add(titleLabel);
 
@@ -70,10 +109,10 @@ public class MainWindow extends javax.swing.JFrame {
         sourceInput.setColumns(20);
         sourceInput.setFont(new Font("Monospaced", Font.PLAIN, 14));
         sourceInput.setRows(10);
-        sourceInput.setBackground(new Color(38, 38, 38));
-        sourceInput.setForeground(new Color(246, 135, 34));
+        sourceInput.setBackground(new Color(255, 245, 250));
+        sourceInput.setForeground(rosa4);
         sourceInput.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 1, 1, 1, new Color(80, 80, 80)),
+                BorderFactory.createMatteBorder(1, 1, 1, 1, rosa2),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
         scrollPaneSource = new JScrollPane(sourceInput);
@@ -83,14 +122,16 @@ public class MainWindow extends javax.swing.JFrame {
         console.setColumns(20);
         console.setFont(new Font("Consolas", Font.PLAIN, 14));
         console.setRows(6);
-        console.setBackground(new Color(38,38,38));
-        console.setForeground(new Color(147, 163, 177));
+        console.setBackground(new Color(255, 245, 250));
+        console.setForeground(new Color(219, 112, 147));
         console.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 1, 1, 1, new Color(80, 80, 80)),
+                BorderFactory.createMatteBorder(1, 1, 1, 1, rosa2),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)
         ));
         scrollPaneConsole = new JScrollPane(console);
         scrollPaneConsole.setBorder(BorderFactory.createEmptyBorder());
+        scrollPaneConsole.setPreferredSize(new Dimension(0, 120));
+        scrollPaneConsole.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
 
         buttonCompile.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
@@ -104,40 +145,71 @@ public class MainWindow extends javax.swing.JFrame {
             }
         });
 
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(52, 55, 57));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel consoleAndCatPanel = new JPanel(new BorderLayout());
+        consoleAndCatPanel.setBackground(rosa1);
 
-        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        consoleAndCatPanel.add(scrollPaneConsole, BorderLayout.CENTER);
 
-        JPanel editorPanel = new JPanel(new BorderLayout());
-        editorPanel.setBackground(new Color(52, 55, 57));
-        editorPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        editorPanel.add(scrollPaneSource, BorderLayout.CENTER);
-        mainPanel.add(editorPanel, BorderLayout.CENTER);
+        catCardLayout = new CardLayout();
+        catContainer = new JPanel(catCardLayout);
+        catContainer.setBackground(rosa1);
+        catContainer.add(sleepCatLabel, "sleep");
+        catContainer.add(catLabel, "happy");
+        catContainer.add(sadCatLabel, "sad");
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setBackground(new Color(52, 55, 57));
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        bottomPanel.add(scrollPaneConsole, BorderLayout.CENTER);
+        catCardLayout.show(catContainer, "sleep");
+
+        JPanel catPanel = new JPanel(new BorderLayout());
+        catPanel.setBackground(rosa1);
+        catPanel.setPreferredSize(new Dimension(CAT_WIDTH + 10, CAT_HEIGHT + 10));
+        catPanel.add(catContainer, BorderLayout.CENTER);
+
+        consoleAndCatPanel.add(catPanel, BorderLayout.EAST);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(new Color(52, 55, 57));
+        buttonPanel.setBackground(rosa1);
         buttonPanel.add(buttonDownloadDocs);
         buttonPanel.add(buttonCompile);
-        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        JPanel bottomSectionPanel = new JPanel(new BorderLayout());
+        bottomSectionPanel.setBackground(rosa1);
+        bottomSectionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        bottomSectionPanel.add(consoleAndCatPanel, BorderLayout.CENTER);
+        bottomSectionPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(rosa1);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPaneSource, BorderLayout.CENTER);
+        mainPanel.add(bottomSectionPanel, BorderLayout.SOUTH);
 
         getContentPane().add(mainPanel);
         pack();
+    }
+
+    private ImageIcon loadAndResizeImage(String path, int width, int height) {
+        try {
+            ImageIcon originalIcon = new ImageIcon(getClass().getResource(path));
+
+            JLabel tempLabel = new JLabel(originalIcon);
+            tempLabel.setPreferredSize(new Dimension(width, height));
+
+            Image img = originalIcon.getImage();
+            Image resizedImg = img.getScaledInstance(width, height, Image.SCALE_FAST);
+            return new ImageIcon(resizedImg);
+
+        } catch (Exception e) {
+            System.err.println("Erro ao redimensionar imagem: " + e.getMessage());
+            return new ImageIcon();
+        }
     }
 
     private void buttonDownloadDocsActionPerformed(ActionEvent evt) {
         try {
             InputStream in = getClass().getResourceAsStream("/resources/documentacao_romenol.pdf");
             if (in == null) {
-                console.setForeground(new Color(200, 81, 79));
+                console.setForeground(new Color(255, 51, 102));
                 console.append("Documentação não encontrada.\n");
                 return;
             }
@@ -150,65 +222,58 @@ public class MainWindow extends javax.swing.JFrame {
 
             Desktop.getDesktop().open(tempFile);
 
-            console.setForeground(new Color(147, 163, 177));
+            console.setForeground(new Color(219, 112, 147));
             console.append("Documentação aberta com sucesso.\n");
         } catch (Exception e) {
-            console.setForeground(new Color(200, 81, 79));
+            console.setForeground(new Color(255, 51, 102));
             console.append("Falha ao abrir a documentação: " + e.getMessage() + "\n");
         }
     }
 
     private void buttonCompileActionPerformed(java.awt.event.ActionEvent evt) {
-
         Lexico lex = new Lexico();
         Sintatico sint = new Sintatico();
         Semantico sem = new Semantico();
-        
+
         lex.setInput(sourceInput.getText());
-        
+
         try {
             sint.parse(lex, sem);
-            console.setForeground(new Color(147, 163, 177));
+            console.setForeground(new Color(219, 112, 147));
             console.setText("Sucesso!");
-        } catch (LexicalError ex) {
-            console.setForeground(new Color(200, 81, 79));
-            console.setText("Problema léxico: "+ex.getLocalizedMessage());
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (SyntacticError ex) {
-            console.setForeground(new Color(200, 81, 79));
-            console.setText("Problema sintático: "+ex.getLocalizedMessage());
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (SemanticError ex) {
-            console.setForeground(new Color(200, 81, 79));
-            console.setText("Problema semântico: "+ex.getLocalizedMessage());
+
+            catCardLayout.show(catContainer, "happy");
+
+        } catch (Exception ex) {
+            console.setForeground(new Color(255, 51, 102));
+            if (ex instanceof LexicalError)
+                console.setText("Problema léxico: " + ex.getLocalizedMessage());
+            else if (ex instanceof SyntacticError)
+                console.setText("Problema sintático: " + ex.getLocalizedMessage());
+            else
+                console.setText("Problema semântico: " + ex.getLocalizedMessage());
+
+            catCardLayout.show(catContainer, "sad");
+
             Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+        revalidate();
+        repaint();
     }
 
     public static void main(String args[]) {
-
         try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(MainWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(MainWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(MainWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(MainWindow.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (Exception ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new MainWindow().setVisible(true);
-            }
-        });
+        java.awt.EventQueue.invokeLater(() -> new MainWindow().setVisible(true));
     }
 }
