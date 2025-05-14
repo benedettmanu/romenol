@@ -1,0 +1,304 @@
+#Options
+GenerateScanner = true
+GenerateParser = true
+Language = Java
+ScannerName = Lexico
+ParserName = Sintatico
+SemanticName = Semantico
+ScannerCaseSensitive = true
+ScannerTable = Full
+Input = String
+Parser = SLR
+#RegularDefinitions
+D : [0-9]
+L : [a-zA-Z]
+B:["/"]
+COMENTARIO:{B}{B}[^\n\r]*
+COMENTARIO_BLOCK:{B}\*[^\*]*\*+([^\*/][^\*]*\*+)*{B}
+#Tokens
+ID: {L}({L}|{D}|_)*
+
+COMECO = ID : "inceput" 
+FIM = ID : "sfarsit" 
+ENQUANTO = ID : "cattimp" 
+SE = ID : "daca"
+ENTAO  = ID : "atunci"  
+SENAO   = ID : "altfel"  
+INTEIRO   = ID : "intreg"  
+REAL     = ID : "real"     
+CARACTER = ID : "caracter" 
+STRING     = ID : "sir" 
+FACA = ID : "fa"
+LEIA = ID : "citeste"
+ESCREVA = ID : "scrie"
+PARA = ID : "pentru"   
+BREAK = ID : "pauza"    
+CONTINUE = ID : "continua"  
+RETURN = ID : "intoarce" 
+FUNCAO  = ID : "functie"
+CONSTANTE = ID : "constant" 
+IMPORT  = ID : "importa" 
+EXPORT  = ID : "exporta"
+BOOL = ID : "bool"
+VOID = ID : "void"
+VETOR = ID : "vector"
+SOMA : "+"
+DIMINUICAO : "-"
+MULTIPLICACAO : "*"
+DIVISAO : "/"
+RESULTADO: "="
+MODULO : "%"
+
+MAIOR : ">"
+MENOR : "<"
+MAIOR_IGUAL : ">="
+MENOR_IGUAL :"<="
+IGUAL : "=="
+DIFERENTE : "!="
+
+E_LOGICO: "&&"
+OU_LOGICO: "||"
+NEGACAO:  "!"
+
+SHIFT_DIREITA :">>"
+SHIFT_ESQUERDA :"<<"
+E_BIT:"&"
+NEGACAO_BIT: "~"
+XOR_BIT : "^"
+OU_BIT: "|"
+
+LITERAL_INTEIRO: {D}+
+LITERAL_REAL: {D}+"."{D}+
+LITERAL_BINARIO: "0b"[01]+
+LITERAL_HEXADECIMAL: "0x"[0-9A-Fa-f]+
+LITERAL_CARACTER:  "'"(.|\\.)"'"  
+LITERAL_STRING_CARACTER: \"([^\"\\]|\\.)*\"
+
+COMENTARIO_LINHA : {COMENTARIO}
+COMENTARIO_MULTILINHA:  {COMENTARIO_BLOCK}
+
+PONTO: "."
+PONTO_E_VIRGULA: ";"
+DOIS_PONTOS : ":"
+VIRGULA : ","
+COLCHETE_DIREITO : "]"
+COLCHETE_ESQUERDO : "["
+CHAVE_DIREITA : "}"
+CHAVE_ESQUERDA : "{"
+PARENTESES_DIREITO : ")"
+PARENTESES_ESQUERDO : "("
+
+
+";"
+
+:[\n\s\t\r]*
+#NonTerminals
+<Program>
+<DeclarationList>
+<Declaration>
+<Type>
+<Assignment>
+<Variable>
+<IDList>
+<ArrayIDList>
+<Block>
+<Block1>
+<InstructionList>
+<Instruction>
+<SimpleInstruction>
+<IfElseInstruction>
+<ReturnStatement>
+<WhileLoop>
+<ForLoop>
+<DoWhileLoop>
+<InputStatement>
+<OutputStatement>
+<OutputList>
+<OutputElement>
+<ParameterList>
+<Subroutine>
+<OptionalParameters>
+<Parameter>
+<FunctionCall>
+<OptionalArgumentList>
+<ArgumentList>
+<Expr>
+<Expr1>
+<Expr2>
+<Expr3>
+<Expr4>
+<Expr5>
+<Expr6>
+<Expr7>
+<Expr8>
+<Expr9>
+<Expr10>
+<RelOp>
+<UnOp>
+<ShiftOp>
+<AddOp>
+<MulOp>
+#Grammar
+<Program> ::= <DeclarationList> #1 ; 
+
+<DeclarationList> ::= <Declaration> 
+                    | <DeclarationList> <Declaration> 
+                    | <DeclarationList> <Block> 
+                    | <Block> ; 
+
+<Declaration> ::= <Type> <IDList> #2
+                | VETOR <Type> <ArrayIDList> #3
+                | <Subroutine> ; 
+
+<Type> ::= INTEIRO #4
+        | REAL #5
+        | CARACTER #6
+        | STRING #7
+        | BOOL #8
+        | VOID #9 ; 
+
+<Assignment> ::= <Variable> <RelOp> <Expr> #10
+              | <Variable> <AddOp> <Expr> #11
+              | <Variable> <MulOp> <Expr> #12 ;
+
+<Variable> ::= ID #13
+             | ID COLCHETE_ESQUERDO <Expr> #14 COLCHETE_DIREITO #15
+              ;
+
+<IDList> ::= <Variable> 
+          | <IDList> VIRGULA <Variable> 
+          | <Assignment> 
+          | <IDList> VIRGULA <Assignment> ; 
+
+<ArrayIDList> ::= <Variable> #16
+                | <ArrayIDList> VIRGULA <Variable> #16 ; 
+
+<Block> ::= COMECO <InstructionList> FIM #17
+          | COMECO FIM #18 ; 
+
+<Block1> ::= CHAVE_ESQUERDA <InstructionList> CHAVE_DIREITA #19
+          | CHAVE_ESQUERDA CHAVE_DIREITA #20 ; 
+
+<InstructionList> ::= <Instruction> 
+                    | <InstructionList> <Instruction> ; 
+
+<Instruction> ::= <SimpleInstruction> 
+                | <IfElseInstruction> 
+                | <ReturnStatement> ; 
+
+<SimpleInstruction> ::= <Declaration> 
+                      | <Assignment> 
+                      | <Block1> 
+                      | <WhileLoop> 
+                      | <ForLoop> 
+                      | <DoWhileLoop> 
+                      | <InputStatement> 
+                      | <OutputStatement> 
+                      | SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22
+                      | <FunctionCall> #23 ; 
+
+<IfElseInstruction> ::= SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22 SENAO <Block1> #24 ; 
+
+<ReturnStatement> ::= RETURN <Expr> #25 ; 
+
+<WhileLoop> ::= ENQUANTO PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27 ; 
+
+<ForLoop> ::= PARA PARENTESES_ESQUERDO <Type> <Assignment> #28 PONTO_E_VIRGULA <Expr> #29 PONTO_E_VIRGULA <Assignment> #30 PARENTESES_DIREITO <Instruction> #31
+            | PARA PARENTESES_ESQUERDO <Assignment> #32 PONTO_E_VIRGULA <Expr> #33 PONTO_E_VIRGULA <Assignment> #34 PARENTESES_DIREITO <Instruction> #35 ;
+
+<DoWhileLoop> ::= FACA <Instruction> #36 ENQUANTO PARENTESES_ESQUERDO <Expr> #37 PARENTESES_DIREITO #38 ; 
+
+<InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
+                  | LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42 ; 
+
+<OutputStatement> ::= ESCREVA PARENTESES_ESQUERDO <OutputList> #43 PARENTESES_DIREITO #44 ; 
+
+<OutputList> ::= <OutputElement> #45
+              | <OutputList> VIRGULA <OutputElement> #46 ; 
+
+<OutputElement> ::= ID #47
+                  | ID COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
+                  | LITERAL_STRING_CARACTER #50
+                  | LITERAL_CARACTER #51
+                  | LITERAL_INTEIRO #52
+                  | LITERAL_REAL #53 ; 
+
+<ParameterList> ::= <Parameter> #54
+                  | <ParameterList> VIRGULA <Parameter> #55 ; 
+
+<Subroutine> ::= FUNCAO <Type> ID #56 PARENTESES_ESQUERDO <OptionalParameters> PARENTESES_DIREITO <Block1> #57 ; 
+
+<OptionalParameters> ::= <ParameterList> 
+                      | î ; 
+
+<Parameter> ::= <Type> <Variable> #58
+              | VETOR <Type> ID COLCHETE_ESQUERDO COLCHETE_DIREITO #59 ; 
+
+<FunctionCall> ::= ID #60 PARENTESES_ESQUERDO <OptionalArgumentList> #61 PARENTESES_DIREITO #62 ; 
+
+<OptionalArgumentList> ::= <ArgumentList> 
+                        | î ; 
+
+<ArgumentList> ::= <Expr> #63
+                | <ArgumentList> VIRGULA <Expr> #64 ; 
+                
+<Expr> ::= <Expr> OU_LOGICO <Expr1> #65
+          | <Expr1> ;
+           
+<Expr1> ::= <Expr1> E_LOGICO <Expr2> #66
+          | <Expr2> ;
+           
+<Expr2> ::= <Expr2> OU_BIT <Expr3> #67
+          | <Expr3> ;
+           
+<Expr3> ::= <Expr3> XOR_BIT <Expr4> #68
+          | <Expr4> ;
+           
+<Expr4> ::= <Expr4> E_BIT <Expr5> #69
+          | <Expr5> ;
+           
+<Expr5> ::= <Expr5> <RelOp> <Expr6> #70
+          | <Expr6> ;
+           
+<Expr6> ::= <Expr6> <ShiftOp> <Expr7> #71
+          | <Expr7> ;
+           
+<Expr7> ::= <Expr7> <AddOp> <Expr8> #72
+          | <Expr8> ;
+           
+<Expr8> ::= <Expr8> <MulOp> <Expr9> #73
+          | <Expr9> ;
+           
+<Expr9> ::= <UnOp> <Expr10> #74
+          | <Expr10> ;
+           
+<Expr10> ::= LITERAL_INTEIRO #75
+          | LITERAL_STRING_CARACTER #76
+          | LITERAL_CARACTER #77
+          | LITERAL_REAL #78
+          | ID #79
+          | ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
+          | PARENTESES_ESQUERDO <Expr> #82 PARENTESES_DIREITO #83
+          | <FunctionCall> #84 ; 
+
+<RelOp> ::= MAIOR #85
+          | MENOR #86
+          | MAIOR_IGUAL #87
+          | MENOR_IGUAL #88
+          | IGUAL #89
+          | DIFERENTE #90
+          | RESULTADO #91 ; 
+          
+<UnOp> ::= DIMINUICAO #92
+          | NEGACAO_BIT #93
+          | NEGACAO #94 ; 
+          
+<ShiftOp> ::= SHIFT_ESQUERDA #95
+          | SHIFT_DIREITA #96 ; 
+          
+<AddOp> ::= SOMA #97
+          | DIMINUICAO #98 ; 
+          
+<MulOp> ::= MULTIPLICACAO #99
+          | DIVISAO #100
+          | MODULO #101 ;
