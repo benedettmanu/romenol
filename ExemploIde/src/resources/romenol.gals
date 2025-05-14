@@ -166,9 +166,7 @@ PARENTESES_ESQUERDO : "("
               ;
 
 <ArrayIDList> ::= <Variable> #16
-                | <ArrayIDList> VIRGULA <Variable> #16
-                | <Assignment> 
-                | <ArrayIDList> VIRGULA <Assignment> ; 
+                | <ArrayIDList> VIRGULA <Variable> #16; 
 
 <Block> ::= COMECO <InstructionList> FIM #17
           | COMECO FIM #18 ; 
