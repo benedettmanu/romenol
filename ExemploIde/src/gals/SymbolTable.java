@@ -11,13 +11,13 @@ public class SymbolTable {
     public static final int PARAMETER = 2;
     public static final int FUNCTION = 3;
 
-    private static class SymbolEntry {
-        String id;
-        int type;        // INT, FLO, CHA, STR, BOO, etc.
-        int modality;    // VARIABLE, ARRAY, PARAMETER, FUNCTION
-        String scope;    // global or function name
-        int position;    // position in source code
-        int size;        // for arrays
+    public static class SymbolEntry {
+        private String id;
+        private int type;        // INT, FLO, CHA, STR, BOO, etc.
+        private int modality;    // VARIABLE, ARRAY, PARAMETER, FUNCTION
+        private String scope;    // global or function name
+        private int position;    // position in source code
+        private int size;        // for arrays
 
         public SymbolEntry(String id, int type, int modality, String scope, int position) {
             this.id = id;
@@ -26,6 +26,30 @@ public class SymbolTable {
             this.scope = scope;
             this.position = position;
             this.size = 0;  // Default size for non-arrays
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public int getType() {
+            return type;
+        }
+
+        public int getModality() {
+            return modality;
+        }
+
+        public String getScope() {
+            return scope;
+        }
+
+        public int getPosition() {
+            return position;
+        }
+
+        public int getSize() {
+            return size;
         }
 
         @Override
@@ -97,7 +121,7 @@ public class SymbolTable {
 
     public void addSymbol(String id, int modality, int position) throws SemanticError {
         if (currentType == -1) {
-            throw new SemanticError("Type not defined for identifier: " + id, position);
+            throw new SemanticError("Tipo não definido para identificador: " + id, position);
         }
 
         String key = id + "@" + currentScope;
@@ -109,19 +133,19 @@ public class SymbolTable {
         List<SymbolEntry> entries = table.get(key);
         for (SymbolEntry entry : entries) {
             if (entry.scope.equals(currentScope)) {
-                throw new SemanticError("Identifier '" + id + "' already defined in scope '" + currentScope + "'", position);
+                throw new SemanticError("Identificador '" + id + "' já definido no escopo '" + currentScope + "'", position);
             }
         }
 
         SymbolEntry entry = new SymbolEntry(id, currentType, modality, currentScope, position);
         entries.add(entry);
 
-        System.out.println("Added to symbol table: " + entry);
+        System.out.println("Adicionado à tabela de símbolos: " + entry);
     }
 
     public void addArray(String id, int position) throws SemanticError {
         if (currentType == -1) {
-            throw new SemanticError("Type not defined for array: " + id, position);
+            throw new SemanticError("Tipo não definido para array: " + id, position);
         }
 
         String key = id + "@" + currentScope;
@@ -133,7 +157,7 @@ public class SymbolTable {
         List<SymbolEntry> entries = table.get(key);
         for (SymbolEntry entry : entries) {
             if (entry.scope.equals(currentScope)) {
-                throw new SemanticError("Array '" + id + "' already defined in scope '" + currentScope + "'", position);
+                throw new SemanticError("Array '" + id + "' já definido no escopo '" + currentScope + "'", position);
             }
         }
 
@@ -141,7 +165,7 @@ public class SymbolTable {
         entry.size = arraySize;
         entries.add(entry);
 
-        System.out.println("Added array to symbol table: " + entry);
+        System.out.println("Array adicionado à tabela de símbolos: " + entry);
     }
 
     public SymbolEntry lookup(String id, String scope) {
@@ -171,12 +195,12 @@ public class SymbolTable {
     }
 
     public void printTable() {
-        System.out.println("===================== SYMBOL TABLE =====================");
+        System.out.println("===================== TABELA DE SÍMBOLOS =====================");
         for (List<SymbolEntry> entries : table.values()) {
             for (SymbolEntry entry : entries) {
                 System.out.println(entry);
             }
         }
-        System.out.println("=======================================================");
+        System.out.println("=============================================================");
     }
 }

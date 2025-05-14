@@ -11,6 +11,7 @@ public class Semantico implements Constants {
     private final Stack<Integer> positionStack = new Stack<>();
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
+    private boolean inDeclarationContext = false;
 
     public void executeAction(int action, Token token) throws SemanticError {
         System.out.println("Ação #" + action + ", Token: " + token);
@@ -28,37 +29,68 @@ public class Semantico implements Constants {
             case 3: // <Declaration> ::= <Type> <ArrayIDList> #3
                 symbolTable.setArray(false);
                 symbolTable.setArraySize(0);
+                inDeclarationContext = false;
                 break;
 
             case 4: // <Type> ::= INTEIRO #4
                 symbolTable.setCurrentType(SemanticTable.INT);
+                inDeclarationContext = true;
                 break;
 
             case 5: // <Type> ::= REAL #5
                 symbolTable.setCurrentType(SemanticTable.FLO);
+                inDeclarationContext = true;
                 break;
 
             case 6: // <Type> ::= CARACTER #6
                 symbolTable.setCurrentType(SemanticTable.CHA);
+                inDeclarationContext = true;
                 break;
 
             case 7: // <Type> ::= STRING #7
                 symbolTable.setCurrentType(SemanticTable.STR);
+                inDeclarationContext = true;
                 break;
 
             case 8: // <Type> ::= BOOL #8
                 symbolTable.setCurrentType(SemanticTable.BOO);
+                inDeclarationContext = true;
                 break;
 
             case 9: // <Type> ::= VOID #9
                 symbolTable.setCurrentType(-2);
+                inDeclarationContext = true;
+                break;
+
+            case 10: // <Assignment> ::= <Variable> <RelOp> <Expr> #10
+                if (!identifierStack.isEmpty()) {
+                    String id = identifierStack.peek(); // Apenas espiamos, não removemos ainda
+                    int position = positionStack.peek();
+                    verifyIdentifierDeclared(id, position);
+                }
+                break;
+
+            case 11: // <Assignment> ::= <Variable> <AddOp> <Expr> #11
+                if (!identifierStack.isEmpty()) {
+                    String id = identifierStack.peek();
+                    int position = positionStack.peek();
+                    verifyIdentifierDeclared(id, position);
+                }
+                break;
+
+            case 12: // <Assignment> ::= <Variable> <MulOp> <Expr> #12
+                if (!identifierStack.isEmpty()) {
+                    String id = identifierStack.peek();
+                    int position = positionStack.peek();
+                    verifyIdentifierDeclared(id, position);
+                }
                 break;
 
             case 13: // <Variable> ::= ID #13
                 identifierStack.push(token.getLexeme());
                 positionStack.push(token.getPosition());
 
-                if (!symbolTable.isArray() && !processingParameters && !processingArrayParameter) {
+                if (inDeclarationContext && !symbolTable.isArray() && !processingParameters && !processingArrayParameter) {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
                     try {
@@ -123,6 +155,28 @@ public class Semantico implements Constants {
             case 20: // <Block1> ::= CHAVE_ESQUERDA CHAVE_DIREITA #20
                 break;
 
+            case 21: // SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22
+                break;
+
+            case 26: // ENQUANTO PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27
+                break;
+
+            case 39: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
+                verifyIdentifierDeclared(token.getLexeme(), token.getPosition());
+                break;
+
+            case 41: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42
+                verifyArrayDeclared(token.getLexeme(), token.getPosition());
+                break;
+
+            case 47: // <OutputElement> ::= ID #47
+                verifyIdentifierDeclared(token.getLexeme(), token.getPosition());
+                break;
+
+            case 48: // <OutputElement> ::= ID COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
+                verifyArrayDeclared(token.getLexeme(), token.getPosition());
+                break;
+
             case 56: // <Subroutine> ::= FUNCAO <Type> ID #56 ...
                 try {
                     symbolTable.addSymbol(token.getLexeme(), SymbolTable.FUNCTION, token.getPosition());
@@ -162,6 +216,9 @@ public class Semantico implements Constants {
                 processingArrayParameter = false;
                 break;
 
+            case 60: // <FunctionCall> ::= ID #60 PARENTESES_ESQUERDO <OptionalArgumentList> #61 PARENTESES_DIREITO #62
+                verifyFunctionDeclared(token.getLexeme(), token.getPosition());
+                break;
 
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
                 if (symbolTable.isArray()) {
@@ -172,10 +229,85 @@ public class Semantico implements Constants {
                         symbolTable.setArraySize(1);
                     }
                 }
+                typeStack.push(SemanticTable.INT);
+                break;
+
+            case 76: // <Expr10> ::= LITERAL_STRING_CARACTER #76
+                typeStack.push(SemanticTable.STR);
+                break;
+
+            case 77: // <Expr10> ::= LITERAL_CARACTER #77
+                typeStack.push(SemanticTable.CHA);
+                break;
+
+            case 78: // <Expr10> ::= LITERAL_REAL #78
+                typeStack.push(SemanticTable.FLO);
+                break;
+
+            case 79: // <Expr10> ::= ID #79
+                verifyIdentifierDeclaredAndPushType(token.getLexeme(), token.getPosition());
+                break;
+
+            case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
+                verifyArrayDeclaredAndPushType(token.getLexeme(), token.getPosition());
+                break;
+
+            case 91: // <RelOp> ::= RESULTADO #91 (operador =)
+                if (!identifierStack.isEmpty()) {
+                    String id = identifierStack.peek();
+                    int position = positionStack.peek();
+                    verifyIdentifierDeclared(id, position);
+                }
                 break;
 
             default:
                 break;
         }
+    }
+
+    private void verifyIdentifierDeclared(String id, int position) throws SemanticError {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
+        if (entry == null) {
+            throw new SemanticError("Identificador '" + id + "' não declarado", position);
+        }
+    }
+
+    private void verifyArrayDeclared(String id, int position) throws SemanticError {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
+        if (entry == null) {
+            throw new SemanticError("Array '" + id + "' não declarado", position);
+        }
+        if (entry.getModality() != SymbolTable.ARRAY) {
+            throw new SemanticError("Identificador '" + id + "' não é um array", position);
+        }
+    }
+
+    private void verifyFunctionDeclared(String id, int position) throws SemanticError {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, "global");
+        if (entry == null) {
+            throw new SemanticError("Função '" + id + "' não declarada", position);
+        }
+        if (entry.getModality() != SymbolTable.FUNCTION) {
+            throw new SemanticError("Identificador '" + id + "' não é uma função", position);
+        }
+    }
+
+    private void verifyIdentifierDeclaredAndPushType(String id, int position) throws SemanticError {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
+        if (entry == null) {
+            throw new SemanticError("Identificador '" + id + "' não declarado", position);
+        }
+        typeStack.push(entry.getType());
+    }
+
+    private void verifyArrayDeclaredAndPushType(String id, int position) throws SemanticError {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
+        if (entry == null) {
+            throw new SemanticError("Array '" + id + "' não declarado", position);
+        }
+        if (entry.getModality() != SymbolTable.ARRAY) {
+            throw new SemanticError("Identificador '" + id + "' não é um array", position);
+        }
+        typeStack.push(entry.getType());
     }
 }
