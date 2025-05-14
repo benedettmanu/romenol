@@ -18,6 +18,8 @@ public class SymbolTable {
         private String scope;    // global or function name
         private int position;    // position in source code
         private int size;        // for arrays
+        private boolean used;    // flag indicating whether the identifier has been used
+        private boolean initialized; // flag indicating whether the identifier has been initialized
 
         public SymbolEntry(String id, int type, int modality, String scope, int position) {
             this.id = id;
@@ -26,6 +28,9 @@ public class SymbolTable {
             this.scope = scope;
             this.position = position;
             this.size = 0;  // Default size for non-arrays
+            this.used = false;
+
+            this.initialized = (modality == PARAMETER || modality == FUNCTION);
         }
 
         public String getId() {
@@ -50,6 +55,22 @@ public class SymbolTable {
 
         public int getSize() {
             return size;
+        }
+
+        public boolean isUsed() {
+            return used;
+        }
+
+        public void setUsed(boolean used) {
+            this.used = used;
+        }
+
+        public boolean isInitialized() {
+            return initialized;
+        }
+
+        public void setInitialized(boolean initialized) {
+            this.initialized = initialized;
         }
 
         @Override
@@ -77,7 +98,9 @@ public class SymbolTable {
                     ", Type: " + typeStr +
                     ", Modality: " + modalityStr +
                     ", Scope: " + scope +
-                    (modality == ARRAY ? ", Size: " + size : "");
+                    (modality == ARRAY ? ", Size: " + size : "") +
+                    ", Used: " + used +
+                    ", Initialized: " + initialized;
         }
     }
 
@@ -192,6 +215,41 @@ public class SymbolTable {
         }
 
         return null;
+    }
+
+    public void markAsUsed(String id, String scope) {
+        SymbolEntry entry = lookup(id, scope);
+        if (entry != null) {
+            entry.setUsed(true);
+        }
+    }
+
+    public void markAsInitialized(String id, String scope) {
+        SymbolEntry entry = lookup(id, scope);
+        if (entry != null) {
+            entry.setInitialized(true);
+        }
+    }
+
+    public void checkUnusedIdentifiers() {
+        System.out.println("\n========== VERIFICAÇÃO DE IDENTIFICADORES NÃO UTILIZADOS ==========");
+        boolean found = false;
+
+        for (List<SymbolEntry> entries : table.values()) {
+            for (SymbolEntry entry : entries) {
+                if (!entry.isUsed() && entry.getModality() != FUNCTION) {
+                    System.out.println("AVISO: Identificador '" + entry.getId() +
+                            "' declarado mas não utilizado no escopo '" + entry.getScope() +
+                            "' (linha/posição: " + entry.getPosition() + ")");
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) {
+            System.out.println("Nenhum identificador declarado sem uso encontrado.");
+        }
+        System.out.println("=================================================================");
     }
 
     public void printTable() {

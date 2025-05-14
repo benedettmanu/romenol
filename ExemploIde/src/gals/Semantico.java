@@ -12,12 +12,14 @@ public class Semantico implements Constants {
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
+    private boolean inAssignmentContext = false;
 
     public void executeAction(int action, Token token) throws SemanticError {
         System.out.println("Ação #" + action + ", Token: " + token);
 
         switch (action) {
             case 1: // <Program> ::= <DeclarationList> #1
+                symbolTable.checkUnusedIdentifiers();
                 symbolTable.printTable();
                 break;
 
@@ -63,27 +65,38 @@ public class Semantico implements Constants {
                 break;
 
             case 10: // <Assignment> ::= <Variable> <RelOp> <Expr> #10
+                inAssignmentContext = true;
                 if (!identifierStack.isEmpty()) {
-                    String id = identifierStack.peek(); // Apenas espiamos, não removemos ainda
-                    int position = positionStack.peek();
+                    String id = identifierStack.pop();
+                    int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+                    symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
+                inAssignmentContext = false;
                 break;
 
             case 11: // <Assignment> ::= <Variable> <AddOp> <Expr> #11
+                inAssignmentContext = true;
                 if (!identifierStack.isEmpty()) {
-                    String id = identifierStack.peek();
-                    int position = positionStack.peek();
+                    String id = identifierStack.pop();
+                    int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                    symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
+                inAssignmentContext = false;
                 break;
 
             case 12: // <Assignment> ::= <Variable> <MulOp> <Expr> #12
+                inAssignmentContext = true;
                 if (!identifierStack.isEmpty()) {
-                    String id = identifierStack.peek();
-                    int position = positionStack.peek();
+                    String id = identifierStack.pop();
+                    int position = positionStack.pop();
                     verifyIdentifierDeclared(id, position);
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                    symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
+                inAssignmentContext = false;
                 break;
 
             case 13: // <Variable> ::= ID #13
@@ -163,18 +176,30 @@ public class Semantico implements Constants {
 
             case 39: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
                 verifyIdentifierDeclared(token.getLexeme(), token.getPosition());
+                symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
                 break;
 
             case 41: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42
                 verifyArrayDeclared(token.getLexeme(), token.getPosition());
+                symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
                 break;
 
             case 47: // <OutputElement> ::= ID #47
-                verifyIdentifierDeclared(token.getLexeme(), token.getPosition());
+                String id = token.getLexeme();
+                int position = token.getPosition();
+                verifyIdentifierDeclared(id, position);
+                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+
+                checkIfInitialized(id, position);
                 break;
 
             case 48: // <OutputElement> ::= ID COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
-                verifyArrayDeclared(token.getLexeme(), token.getPosition());
+                id = token.getLexeme();
+                position = token.getPosition();
+                verifyArrayDeclared(id, position);
+                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+
+                checkIfInitialized(id, position);
                 break;
 
             case 56: // <Subroutine> ::= FUNCAO <Type> ID #56 ...
@@ -195,12 +220,13 @@ public class Semantico implements Constants {
 
             case 58: // <Parameter> ::= <Type> <Variable> #58
                 if (!identifierStack.isEmpty()) {
-                    String id = identifierStack.pop();
-                    int position = positionStack.pop();
+                    String paramId = identifierStack.pop();
+                    int paramPosition = positionStack.pop();
                     try {
-                        symbolTable.addSymbol(id, SymbolTable.PARAMETER, position);
+                        symbolTable.addSymbol(paramId, SymbolTable.PARAMETER, paramPosition);
+                        symbolTable.markAsInitialized(paramId, symbolTable.getCurrentScope());
                     } catch (SemanticError e) {
-                        throw new SemanticError(e.getMessage(), position);
+                        throw new SemanticError(e.getMessage(), paramPosition);
                     }
                 }
                 break;
@@ -210,6 +236,7 @@ public class Semantico implements Constants {
                 try {
                     symbolTable.addSymbol(token.getLexeme(), SymbolTable.PARAMETER, token.getPosition());
                     symbolTable.setArray(true);
+                    symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
                 } catch (SemanticError e) {
                     throw new SemanticError(e.getMessage(), token.getPosition());
                 }
@@ -218,6 +245,7 @@ public class Semantico implements Constants {
 
             case 60: // <FunctionCall> ::= ID #60 PARENTESES_ESQUERDO <OptionalArgumentList> #61 PARENTESES_DIREITO #62
                 verifyFunctionDeclared(token.getLexeme(), token.getPosition());
+                symbolTable.markAsUsed(token.getLexeme(), "global");
                 break;
 
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
@@ -245,17 +273,32 @@ public class Semantico implements Constants {
                 break;
 
             case 79: // <Expr10> ::= ID #79
-                verifyIdentifierDeclaredAndPushType(token.getLexeme(), token.getPosition());
+                id = token.getLexeme();
+                position = token.getPosition();
+                verifyIdentifierDeclaredAndPushType(id, position);
+
+                if (!inAssignmentContext) {
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                    checkIfInitialized(id, position);
+                }
                 break;
 
             case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
-                verifyArrayDeclaredAndPushType(token.getLexeme(), token.getPosition());
+                id = token.getLexeme();
+                position = token.getPosition();
+                verifyArrayDeclaredAndPushType(id, position);
+
+                if (!inAssignmentContext) {
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                    checkIfInitialized(id, position);
+                }
                 break;
 
             case 91: // <RelOp> ::= RESULTADO #91 (operador =)
+                inAssignmentContext = true;
                 if (!identifierStack.isEmpty()) {
-                    String id = identifierStack.peek();
-                    int position = positionStack.peek();
+                    id = identifierStack.peek();
+                    position = positionStack.peek();
                     verifyIdentifierDeclared(id, position);
                 }
                 break;
@@ -309,5 +352,14 @@ public class Semantico implements Constants {
             throw new SemanticError("Identificador '" + id + "' não é um array", position);
         }
         typeStack.push(entry.getType());
+    }
+
+    private void checkIfInitialized(String id, int position) {
+        SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
+        if (entry != null && !entry.isInitialized()) {
+            System.out.println("AVISO: Possível uso de variável não inicializada '" + id +
+                    "' no escopo '" + symbolTable.getCurrentScope() +
+                    "' (linha/posição: " + position + ")");
+        }
     }
 }

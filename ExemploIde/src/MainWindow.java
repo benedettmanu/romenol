@@ -4,8 +4,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.logging.Level;
@@ -237,14 +239,36 @@ public class MainWindow extends javax.swing.JFrame {
 
         lex.setInput(sourceInput.getText());
 
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        PrintStream customPrintStream = new PrintStream(outputStream);
+        System.setOut(customPrintStream);
+
         try {
             sint.parse(lex, sem);
+
+            System.setOut(originalOut);
+
+            String capturedOutput = outputStream.toString();
+
             console.setForeground(new Color(219, 112, 147));
-            console.setText("Sucesso!");
+            console.setText("Sucesso!\n\n");
+
+            if (capturedOutput.contains("AVISO:")) {
+                console.append("=== WARNINGS ===\n");
+                String[] lines = capturedOutput.split("\n");
+                for (String line : lines) {
+                    if (line.contains("AVISO:")) {
+                        console.append(line + "\n");
+                    }
+                }
+            }
 
             catCardLayout.show(catContainer, "happy");
 
         } catch (Exception ex) {
+            System.setOut(originalOut);
+
             console.setForeground(new Color(255, 51, 102));
             if (ex instanceof LexicalError)
                 console.setText("Problema léxico: " + ex.getLocalizedMessage());
