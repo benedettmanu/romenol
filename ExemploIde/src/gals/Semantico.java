@@ -205,6 +205,9 @@ public class Semantico implements Constants {
                             }
                         } else {
                             symbolTable.addSymbol(id, SymbolTable.VARIABLE, position);
+                            if (inAssignmentContext || token.getLexeme().contains("=")) {
+                                symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
+                            }
                         }
                     } catch (SemanticError e) {
                         throw new SemanticError(e.getMessage(), position);
@@ -412,10 +415,8 @@ public class Semantico implements Constants {
                 position = token.getPosition();
                 verifyIdentifierDeclaredAndPushType(id, position);
 
-                if (!inAssignmentContext) {
-                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
-                    checkIfInitialized(id, position);
-                }
+                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                checkIfInitialized(id, position);
                 break;
 
             case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
@@ -459,6 +460,8 @@ public class Semantico implements Constants {
                     id = identifierStack.peek();
                     position = positionStack.peek();
                     verifyIdentifierDeclared(id, position);
+
+                    symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
                 }
                 break;
 
