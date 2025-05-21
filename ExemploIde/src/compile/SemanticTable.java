@@ -84,9 +84,9 @@ public class SemanticTable {
     // 5 x 5 = TIPO X TIPO
     static int atribTable [][]={/* INT FLO CHA STR BOO  */
             /*INT*/    {OK_, WAR, ERR, ERR, ERR},
-            /*FLOAT*/  {WAR, OK_, ERR, ERR, ERR},
+            /*FLOAT*/  {OK_, OK_, ERR, ERR, ERR},
             /*CHAR*/   {ERR, ERR, OK_, ERR, ERR},
-            /*STRING*/ {ERR, ERR, ERR, OK_, ERR},
+            /*STRING*/ {ERR, ERR, OK_, OK_, ERR},
             /*BOOL*/   {ERR, ERR, ERR, ERR, OK_}
     };
 
