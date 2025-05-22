@@ -601,8 +601,8 @@ public class Semantico implements Constants {
     private void checkIfInitialized(String id, int position) {
         SymbolTable.SymbolEntry entry = symbolTable.lookup(id, symbolTable.getCurrentScope());
         if (entry != null && !entry.isInitialized()) {
-            System.out.println("AVISO: Possível uso de variável não inicializada '" + id +
-                    "' no escopo '" + symbolTable.getCurrentScope() +
+            System.out.println("AVISO: Variável '"+ id + 
+            "'não inicializada no escopo '" + symbolTable.getCurrentScope() +
                     "' (linha/posição: " + position + ")");
         }
     }
