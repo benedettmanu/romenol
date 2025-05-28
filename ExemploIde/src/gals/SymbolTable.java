@@ -208,6 +208,22 @@ public class SymbolTable {
         }
 
         if (!scope.equals("global")) {
+            if (scope.startsWith("if_") || scope.startsWith("else_") || 
+                scope.startsWith("while_") || scope.startsWith("for_") || 
+                scope.startsWith("dowhile_")) {
+                
+                for (String tableKey : table.keySet()) {
+                    if (tableKey.startsWith(id + "@func_")) {
+                        List<SymbolEntry> entries = table.get(tableKey);
+                        for (SymbolEntry entry : entries) {
+                            if (entry.scope.startsWith("func_")) {
+                                return entry;
+                            }
+                        }
+                    }
+                }
+            }
+            
             key = id + "@global";
             if (table.containsKey(key)) {
                 List<SymbolEntry> entries = table.get(key);

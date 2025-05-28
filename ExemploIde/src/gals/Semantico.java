@@ -10,10 +10,16 @@ public class Semantico implements Constants {
     private final Stack<String> identifierStack = new Stack<>();
     private final Stack<Integer> positionStack = new Stack<>();
     private final Stack<Integer> operatorStack = new Stack<>();
+    private final Stack<String> scopeStack = new Stack<>();
+    private int scopeCounter = 0;
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
     private boolean inAssignmentContext = false;
+
+    public Semantico() {
+        scopeStack.push("global");
+    }
 
     public void executeAction(int action, Token token) throws SemanticError {
         System.out.println("Ação #" + action + ", Token: " + token);
@@ -225,9 +231,11 @@ public class Semantico implements Constants {
                 break;
 
             case 19: // <Block1> ::= CHAVE_ESQUERDA <InstructionList> CHAVE_DIREITA #19
+                exitCurrentScope();
                 break;
 
             case 20: // <Block1> ::= CHAVE_ESQUERDA CHAVE_DIREITA #20
+                exitCurrentScope();
                 break;
 
             case 21: // SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22
@@ -236,6 +244,14 @@ public class Semantico implements Constants {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
+                enterNewScope("if");
+                break;
+
+            case 22: // Final do bloco IF (já tratado no case 19/20)
+                break;
+            
+            case 24: // SENAO <Block1> #24
+                enterNewScope("else");
                 break;
 
             case 26: // ENQUANTO PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27
@@ -244,6 +260,35 @@ public class Semantico implements Constants {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
+                enterNewScope("while"); // Entra em novo escopo para o WHILE
+                break;
+
+            case 27: // Final do while
+                exitCurrentScope();
+                break;
+            
+            case 28: // PARA - primeiro assignment no FOR
+                enterNewScope("for");
+                break;
+            
+            case 31: // Final do FOR (primeiro tipo)
+                exitCurrentScope(); // Sai do escopo do for
+                break;
+            
+            case 32: // PARA - assignment no FOR (segundo tipo)
+                enterNewScope("for");
+                break;
+            
+            case 35: // Final do FOR (segundo tipo)
+                exitCurrentScope();
+                break;
+            
+            case 36: // FACA no DO-WHILE
+                enterNewScope("dowhile");
+                break;
+            
+            case 38: // Final do DO-WHILE
+                exitCurrentScope();
                 break;
 
             case 39: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
@@ -287,10 +332,10 @@ public class Semantico implements Constants {
                 checkIfInitialized(id, position);
                 break;
 
-            case 56: // <Subroutine> ::= FUNCAO <Type> ID #56 ...
+            case 56: // FUNCAO <Type> ID #56 ...
                 try {
                     symbolTable.addSymbol(token.getLexeme(), SymbolTable.FUNCTION, token.getPosition());
-                    symbolTable.setCurrentScope(token.getLexeme());
+                    enterNewScope("func_" + token.getLexeme());
                     processingParameters = true;
                 } catch (SemanticError e) {
                     throw new SemanticError(e.getMessage(), token.getPosition());
@@ -298,7 +343,7 @@ public class Semantico implements Constants {
                 break;
 
             case 57: // ... <Block1> #57 (end of function)
-                symbolTable.setCurrentScope("global");
+                exitCurrentScope();
                 processingParameters = false;
                 processingArrayParameter = false;
                 break;
@@ -604,6 +649,21 @@ public class Semantico implements Constants {
             System.out.println("AVISO: Variável '"+ id + 
             "'não inicializada no escopo '" + symbolTable.getCurrentScope() +
                     "' (linha/posição: " + position + ")");
+        }
+    }
+
+    private void enterNewScope(String scopeType) {
+        String newScope = scopeType + "_" + (++scopeCounter);
+        scopeStack.push(newScope);
+        symbolTable.setCurrentScope(newScope);
+        System.out.println("Entrando no escopo: " + newScope);
+    }
+    
+    private void exitCurrentScope() {
+        if (scopeStack.size() > 1) {
+            String exitingScope = scopeStack.pop();
+            symbolTable.setCurrentScope(scopeStack.peek());
+            System.out.println("Saindo do escopo: " + exitingScope);
         }
     }
 
