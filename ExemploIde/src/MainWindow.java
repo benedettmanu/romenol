@@ -441,6 +441,9 @@ public class MainWindow extends javax.swing.JFrame {
 
             CodeGenerator generator = new CodeGenerator(symbolTable);
             generator.generateCode();
+            String semanticCode = lastSemantico.getGeneratedCode();
+            generator.appendGeneratedCode(semanticCode);
+
             String asmCode = generator.getGeneratedCode();
 
             JTextArea textArea = new JTextArea(asmCode);

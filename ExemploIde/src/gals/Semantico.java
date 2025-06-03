@@ -11,6 +11,7 @@ public class Semantico implements Constants {
     private final Stack<Integer> positionStack = new Stack<>();
     private final Stack<Integer> operatorStack = new Stack<>();
     private final Stack<String> scopeStack = new Stack<>();
+    private final StringBuilder codeGeneration;
     private int scopeCounter = 0;
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
@@ -19,6 +20,23 @@ public class Semantico implements Constants {
 
     public Semantico() {
         scopeStack.push("global");
+        codeGeneration = new StringBuilder();
+    }
+
+    private void gera_cod(String instruction, String operand) {
+        if (operand != null && !operand.isEmpty()) {
+            codeGeneration.append("   ").append(instruction).append("     ").append(operand).append("\n");
+        } else {
+            codeGeneration.append("   ").append(instruction).append("\n");
+        }
+    }
+
+    public String getGeneratedCode() {
+        return codeGeneration.toString();
+    }
+
+    public void clearGeneratedCode() {
+        codeGeneration.setLength(0);
     }
 
     public void executeAction(int action, Token token) throws SemanticError {
@@ -294,6 +312,9 @@ public class Semantico implements Constants {
             case 39: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID #39 PARENTESES_DIREITO #40
                 verifyIdentifierDeclared(token.getLexeme(), token.getPosition());
                 symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
+
+                gera_cod("LD", "$in_port");
+                gera_cod("STO", token.getLexeme());
                 break;
 
             case 41: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42
@@ -306,6 +327,12 @@ public class Semantico implements Constants {
                 }
 
                 symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
+
+                gera_cod("LD", "i");
+                gera_cod("STO", "$indr");
+                gera_cod("LD", "$in_port");
+                gera_cod("STOV", token.getLexeme());
+
                 break;
 
             case 47: // <OutputElement> ::= ID #47
@@ -315,6 +342,9 @@ public class Semantico implements Constants {
                 symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
 
                 checkIfInitialized(id, position);
+
+                gera_cod("LD", token.getLexeme());
+                gera_cod("STO", "$out_port");
                 break;
 
             case 48: // <OutputElement> ::= ID COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
@@ -330,6 +360,11 @@ public class Semantico implements Constants {
 
                 symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                 checkIfInitialized(id, position);
+
+                gera_cod("LD", "i");
+                gera_cod("STO", "$indr");
+                gera_cod("LDV", token.getLexeme());
+                gera_cod("STO", "$out_port");
                 break;
 
             case 56: // FUNCAO <Type> ID #56 ...

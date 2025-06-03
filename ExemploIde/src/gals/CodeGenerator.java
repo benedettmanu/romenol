@@ -20,14 +20,13 @@ public class CodeGenerator {
     }
 
     private void initializeSections() {
-        dataSection.append(".data\n\n");
-        textSection.append(".text\n\n");
-        textSection.append("_PRINCIPAL:\n\n");
+        dataSection.append(".data\n");
+        textSection.append(".text\n");
+        textSection.append("_PRINCIPAL:\n");
     }
 
     public void generateCode() {
         generateDataSection();
-        generateTextSection();
         generateHalt();
     }
 
@@ -47,11 +46,13 @@ public class CodeGenerator {
                 }
             }
         }
+
+        dataSection.append("\n");
     }
 
     private void generateVariableDeclaration(String varName, SymbolTable.SymbolEntry entry) {
         String defaultValue = getDefaultValue(entry.getType());
-        dataSection.append("   ").append(varName).append(" : ").append(defaultValue).append("\n\n");
+        dataSection.append("   ").append(varName).append(" : ").append(defaultValue).append("\n");
         variableMap.put(varName, varName);
     }
 
@@ -67,29 +68,12 @@ public class CodeGenerator {
                 dataSection.append(",");
             }
         }
-        dataSection.append("\n\n");
+        dataSection.append("\n");
         variableMap.put(arrayName, arrayName);
-    }
-
-    private void generateTextSection() {
     }
 
     private String getDefaultValue(int type) {
         return "0";
-    }
-
-    public void generateAssignment(String varName, String value) {
-        if (variableMap.containsKey(varName)) {
-            textSection.append("   LDI     ").append(value).append("\n");
-            textSection.append("   STO     ").append(varName).append("\n\n");
-        }
-    }
-
-    public void generateArrayAssignment(String arrayName, int index, String value) {
-        if (variableMap.containsKey(arrayName)) {
-            textSection.append("   LDI     ").append(value).append("\n");
-            textSection.append("   STO     ").append(arrayName).append("[").append(index).append("]\n\n");
-        }
     }
 
     private void generateHalt() {
@@ -101,6 +85,18 @@ public class CodeGenerator {
         fullCode.append(dataSection.toString());
         fullCode.append(textSection.toString());
         return fullCode.toString();
+    }
+
+    public void appendGeneratedCode(String code) {
+        String currentText = textSection.toString();
+        if (currentText.contains("   HLT     0")) {
+            textSection.setLength(0);
+            textSection.append(currentText.replace("   HLT     0\n", ""));
+            textSection.append(code);
+            textSection.append("   HLT     0\n");
+        } else {
+            textSection.append(code);
+        }
     }
 
     public void printGeneratedCode() {
