@@ -7,6 +7,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +32,7 @@ public class MainWindow extends javax.swing.JFrame {
     private JButton buttonCompile;
     private JButton buttonDownloadDocs;
     private JButton buttonShowSymbols;
+    private JButton buttonShowAsm;
     private JLabel flagLabel;
     private JLabel catLabel;
     private JLabel sadCatLabel;
@@ -78,6 +80,7 @@ public class MainWindow extends javax.swing.JFrame {
         buttonCompile = new JButton("Compile");
         buttonDownloadDocs = new JButton("Documentation");
         buttonShowSymbols = new JButton("Symbol Table");
+        buttonShowAsm = new JButton("Show ASM");
 
         catLabel = new JLabel();
         sadCatLabel = new JLabel();
@@ -122,6 +125,12 @@ public class MainWindow extends javax.swing.JFrame {
         buttonShowSymbols.setForeground(Color.WHITE);
         buttonShowSymbols.setFocusPainted(false);
         buttonShowSymbols.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+
+        buttonShowAsm.setFont(globalFont);
+        buttonShowAsm.setBackground(rosa2);
+        buttonShowAsm.setForeground(Color.WHITE);
+        buttonShowAsm.setFocusPainted(false);
+        buttonShowAsm.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
 
         ImageIcon flagIcon = new ImageIcon(getClass().getResource("/resources/romenia_flag.jpeg"));
         Image originalImage = flagIcon.getImage();
@@ -185,6 +194,12 @@ public class MainWindow extends javax.swing.JFrame {
             }
         });
 
+        buttonShowAsm.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                showAsmDialog();
+            }
+        });
+
         JPanel consoleAndCatPanel = new JPanel(new BorderLayout());
         consoleAndCatPanel.setBackground(rosa1);
 
@@ -209,6 +224,7 @@ public class MainWindow extends javax.swing.JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(rosa1);
         buttonPanel.add(buttonDownloadDocs);
+        buttonPanel.add(buttonShowAsm);
         buttonPanel.add(buttonShowSymbols);
         buttonPanel.add(buttonCompile);
 
@@ -406,7 +422,78 @@ public class MainWindow extends javax.swing.JFrame {
             e.printStackTrace();
         }
     }
-    
+
+    private void showAsmDialog() {
+        if (lastSemantico == null) {
+            JOptionPane.showMessageDialog(this, "Compile algo primeiro!", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            Field symbolTableField = Semantico.class.getDeclaredField("symbolTable");
+            symbolTableField.setAccessible(true);
+            SymbolTable symbolTable = (SymbolTable) symbolTableField.get(lastSemantico);
+
+            if (symbolTable == null) {
+                JOptionPane.showMessageDialog(this, "Tabela de símbolos vazia.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            CodeGenerator generator = new CodeGenerator(symbolTable);
+            generator.generateCode();
+            String asmCode = generator.getGeneratedCode();
+
+            JTextArea textArea = new JTextArea(asmCode);
+            textArea.setFont(codeFont);
+            textArea.setBackground(background);
+            textArea.setForeground(rosa4);
+            textArea.setCaretColor(rosa3);
+            textArea.setEditable(false);
+            textArea.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, rosa2));
+
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(600, 400));
+            scrollPane.getViewport().setBackground(background);
+            scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(2, 2, 2, 2, rosa2),
+                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            ));
+
+            JButton copyButton = new JButton("Copiar Código");
+            copyButton.setFont(globalFont);
+            copyButton.setBackground(rosa3);
+            copyButton.setForeground(Color.WHITE);
+            copyButton.setFocusPainted(false);
+            copyButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            copyButton.addActionListener(e -> {
+                Toolkit.getDefaultToolkit()
+                        .getSystemClipboard()
+                        .setContents(new StringSelection(asmCode), null);
+                JOptionPane.showMessageDialog(this, "Código copiado para a área de transferência!", "Copiado", JOptionPane.INFORMATION_MESSAGE);
+            });
+
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(rosa1);
+            panel.add(scrollPane, BorderLayout.CENTER);
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonPanel.setBackground(rosa1);
+            buttonPanel.add(copyButton);
+            panel.add(buttonPanel, BorderLayout.SOUTH);
+
+            JDialog dialog = new JDialog(this, "Código ASM", true);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            dialog.setContentPane(panel);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+
+        } catch (Exception e) {
+            console.append("Erro ao gerar ASM: " + e.getMessage() + "\n");
+            e.printStackTrace();
+        }
+    }
+
     private String getTypeString(int type) {
         try {
             Class<?> semanticTableClass = Class.forName("compile.SemanticTable");
