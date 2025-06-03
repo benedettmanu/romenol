@@ -17,6 +17,8 @@ public class Semantico implements Constants {
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
     private boolean inAssignmentContext = false;
+    private boolean isArrayAssignment = false;
+    private String currentArrayId = null;
 
     public Semantico() {
         scopeStack.push("global");
@@ -51,6 +53,10 @@ public class Semantico implements Constants {
             case 2: // | ID #2 COLCHETE_ESQUERDO <Expr> #14 COLCHETE_DIREITO #15
                 identifierStack.push(token.getLexeme());
                 positionStack.push(token.getPosition());
+                if (inAssignmentContext) {
+                    isArrayAssignment = true;
+                    currentArrayId = token.getLexeme();
+                }
                 break;
 
             case 3: // <Declaration> ::= <Type> <ArrayIDList> #3
@@ -113,6 +119,14 @@ public class Semantico implements Constants {
 
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
+
+                    if (isArrayAssignment) {
+                        gera_cod("STOV", id);
+                        isArrayAssignment = false;
+                        currentArrayId = null;
+                    } else {
+                        gera_cod("STO", id);
+                    }
                 }
                 inAssignmentContext = false;
                 break;
@@ -495,18 +509,22 @@ public class Semantico implements Constants {
                         symbolTable.setArraySize(1);
                     }
                 }
+                gera_cod("LD", token.getLexeme());
                 typeStack.push(SemanticTable.INT);
                 break;
 
             case 76: // <Expr10> ::= LITERAL_STRING_CARACTER #76
+                gera_cod("LD", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.STR);
                 break;
 
             case 77: // <Expr10> ::= LITERAL_CARACTER #77
+                gera_cod("LD", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.CHA);
                 break;
 
             case 78: // <Expr10> ::= LITERAL_REAL #78
+                gera_cod("LD", token.getLexeme());
                 typeStack.push(SemanticTable.FLO);
                 break;
 
@@ -515,8 +533,11 @@ public class Semantico implements Constants {
                 position = token.getPosition();
                 verifyIdentifierDeclaredAndPushType(id, position);
 
-                symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
-                checkIfInitialized(id, position);
+                if (!inAssignmentContext) {
+                    gera_cod("LD", id);
+                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
+                    checkIfInitialized(id, position);
+                }
                 break;
 
             case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
@@ -531,7 +552,15 @@ public class Semantico implements Constants {
 
                 verifyArrayDeclaredAndPushType(id, position);
 
-                if (!inAssignmentContext) {
+                gera_cod("STO", "$indr");
+
+                if (inAssignmentContext) {
+                    isArrayAssignment = true;
+                    currentArrayId = id;
+                    identifierStack.push(id);
+                    positionStack.push(position);
+                } else {
+                    gera_cod("LDV", id);
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     checkIfInitialized(id, position);
                 }
