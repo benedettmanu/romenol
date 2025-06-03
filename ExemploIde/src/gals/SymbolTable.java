@@ -284,4 +284,8 @@ public class SymbolTable {
         }
         System.out.println("=============================================================");
     }
+
+    public Map<String, List<SymbolEntry>> getTable() {
+        return table;
+    }
 }
