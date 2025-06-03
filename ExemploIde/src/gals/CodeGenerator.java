@@ -22,7 +22,6 @@ public class CodeGenerator {
     private void initializeSections() {
         dataSection.append(".data\n");
         textSection.append(".text\n");
-        textSection.append("_PRINCIPAL:\n");
     }
 
     public void generateCode() {
