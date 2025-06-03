@@ -1,9 +1,6 @@
 package gals;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SymbolTable {
     public static final int VARIABLE = 0;
@@ -108,7 +105,7 @@ public class SymbolTable {
     private int currentType = -1;
     private boolean isArray = false;
     private int arraySize = 0;
-    private final Map<String, List<SymbolEntry>> table = new HashMap<>();
+    private final Map<String, List<SymbolEntry>> table = new LinkedHashMap<>();
 
     public void setCurrentScope(String scope) {
         this.currentScope = scope;

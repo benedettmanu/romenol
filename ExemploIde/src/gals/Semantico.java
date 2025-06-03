@@ -121,6 +121,10 @@ public class Semantico implements Constants {
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
 
                     if (isArrayAssignment) {
+                        gera_cod("STO", "1001");
+                        gera_cod("LD", "1000");
+                        gera_cod("STO", "$indr");
+                        gera_cod("LD", "1001");
                         gera_cod("STOV", id);
                         isArrayAssignment = false;
                         currentArrayId = null;
@@ -509,22 +513,22 @@ public class Semantico implements Constants {
                         symbolTable.setArraySize(1);
                     }
                 }
-                gera_cod("LD", token.getLexeme());
+                gera_cod("LDI", token.getLexeme());
                 typeStack.push(SemanticTable.INT);
                 break;
 
             case 76: // <Expr10> ::= LITERAL_STRING_CARACTER #76
-                gera_cod("LD", "'" + token.getLexeme() + "'");
+                gera_cod("LDI", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.STR);
                 break;
 
             case 77: // <Expr10> ::= LITERAL_CARACTER #77
-                gera_cod("LD", "'" + token.getLexeme() + "'");
+                gera_cod("LDI", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.CHA);
                 break;
 
             case 78: // <Expr10> ::= LITERAL_REAL #78
-                gera_cod("LD", token.getLexeme());
+                gera_cod("LDI", token.getLexeme());
                 typeStack.push(SemanticTable.FLO);
                 break;
 
@@ -532,9 +536,9 @@ public class Semantico implements Constants {
                 id = token.getLexeme();
                 position = token.getPosition();
                 verifyIdentifierDeclaredAndPushType(id, position);
+                gera_cod("LD", id);
 
                 if (!inAssignmentContext) {
-                    gera_cod("LD", id);
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     checkIfInitialized(id, position);
                 }
@@ -552,7 +556,7 @@ public class Semantico implements Constants {
 
                 verifyArrayDeclaredAndPushType(id, position);
 
-                gera_cod("STO", "$indr");
+                gera_cod("STO", "1000");
 
                 if (inAssignmentContext) {
                     isArrayAssignment = true;
@@ -560,6 +564,8 @@ public class Semantico implements Constants {
                     identifierStack.push(id);
                     positionStack.push(position);
                 } else {
+                    gera_cod("LD", "1000");
+                    gera_cod("STO", "$indr");
                     gera_cod("LDV", id);
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     checkIfInitialized(id, position);
