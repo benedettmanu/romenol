@@ -318,7 +318,10 @@ public class Semantico implements Constants {
                 break;
 
             case 41: // <InputStatement> ::= LEIA PARENTESES_ESQUERDO ID COLCHETE_ESQUERDO <Expr> #41 COLCHETE_DIREITO PARENTESES_DIREITO #42
-                verifyArrayDeclared(token.getLexeme(), token.getPosition());
+                String arrayId = identifierStack.pop();
+                int arrayPosition = positionStack.pop();
+
+                verifyArrayDeclared(arrayId, arrayPosition);
 
                 int indexType = typeStack.pop();
                 if (indexType != SemanticTable.INT) {
@@ -328,10 +331,10 @@ public class Semantico implements Constants {
 
                 symbolTable.markAsInitialized(token.getLexeme(), symbolTable.getCurrentScope());
 
-                gera_cod("LD", "i");
+                gera_cod("LDI", token.getLexeme());
                 gera_cod("STO", "$indr");
                 gera_cod("LD", "$in_port");
-                gera_cod("STOV", token.getLexeme());
+                gera_cod("STOV", arrayId);
 
                 break;
 
@@ -348,8 +351,9 @@ public class Semantico implements Constants {
                 break;
 
             case 48: // <OutputElement> ::= ID COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
-                id = token.getLexeme();
-                position = token.getPosition();
+                id = identifierStack.pop();
+                position = positionStack.pop();
+
                 verifyArrayDeclared(id, position);
 
                 indexType = typeStack.pop();
@@ -361,9 +365,9 @@ public class Semantico implements Constants {
                 symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                 checkIfInitialized(id, position);
 
-                gera_cod("LD", "i");
+                gera_cod("LDI", token.getLexeme());
                 gera_cod("STO", "$indr");
-                gera_cod("LDV", token.getLexeme());
+                gera_cod("LDV", id);
                 gera_cod("STO", "$out_port");
                 break;
 
@@ -606,6 +610,11 @@ public class Semantico implements Constants {
 
             case 103: // "false"
                 typeStack.push(SemanticTable.BOO);
+                break;
+
+            case 104: // ID #104 COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
+                identifierStack.push(token.getLexeme());
+                positionStack.push(token.getPosition());
                 break;
 
             default:
