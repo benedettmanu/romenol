@@ -99,7 +99,12 @@ public class Semantico implements Constants {
                 if (!identifierStack.isEmpty()) {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
-                    verifyIdentifierDeclared(id, position);
+
+                    if (isArray) {
+                        verifyArrayDeclared(id, position);
+                    } else {
+                        verifyIdentifierDeclared(id, position);
+                    }
 
                     int varType = symbolTable.lookup(id, symbolTable.getCurrentScope()).getType();
                     int exprType = typeStack.pop();
@@ -473,7 +478,25 @@ public class Semantico implements Constants {
                             token.getPosition());
                 }
 
-                gera_cod("OR", ""); // OR bit a bit
+                String rightOp = operandStack.pop();
+                boolean rightIsConst = constantStack.pop();
+                String leftOp = operandStack.pop();
+                boolean leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                if (rightIsConst) {
+                    gera_cod("ORI", rightOp);
+                } else {
+                    gera_cod("OR", rightOp);
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
                 typeStack.push(SemanticTable.INT);
                 break;
 
@@ -492,7 +515,25 @@ public class Semantico implements Constants {
                             token.getPosition());
                 }
 
-                gera_cod("XOR", ""); // XOR bit a bit
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                if (rightIsConst) {
+                    gera_cod("XORI", rightOp);
+                } else {
+                    gera_cod("XOR", rightOp);
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
                 typeStack.push(SemanticTable.INT);
                 break;
 
@@ -511,7 +552,25 @@ public class Semantico implements Constants {
                             token.getPosition());
                 }
 
-                gera_cod("AND", ""); // AND bit a bit
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                if (rightIsConst) {
+                    gera_cod("ANDI", rightOp);
+                } else {
+                    gera_cod("AND", rightOp);
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
                 typeStack.push(SemanticTable.INT);
                 break;
 
@@ -535,12 +594,33 @@ public class Semantico implements Constants {
                             token.getPosition());
                 }
 
-                if (op == SemanticTable.SHL) {
-                    gera_cod("SLL", "");
-                } else if (op == SemanticTable.SHR) {
-                    gera_cod("SRL", "");
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
                 }
 
+                if (op == SemanticTable.SHL) {
+                    if (rightIsConst) {
+                        gera_cod("SLLI", rightOp);
+                    } else {
+                        gera_cod("SLL", rightOp);
+                    }
+                } else if (op == SemanticTable.SHR) {
+                    if (rightIsConst) {
+                        gera_cod("SRLI", rightOp);
+                    } else {
+                        gera_cod("SRL", rightOp);
+                    }
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
                 typeStack.push(SemanticTable.INT);
                 break;
 
@@ -561,10 +641,10 @@ public class Semantico implements Constants {
                             " com operador " + getOperatorName(op), token.getPosition());
                 }
 
-                String rightOp = operandStack.pop();
-                boolean rightIsConst = constantStack.pop();
-                String leftOp = operandStack.pop();
-                boolean leftIsConst = constantStack.pop();
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
 
                 if (leftIsConst) {
                     gera_cod("LDI", leftOp);
@@ -725,8 +805,8 @@ public class Semantico implements Constants {
                 break;
 
             case 80: // <Expr10> ::= ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
-                id = token.getLexeme();
-                position = token.getPosition();
+                arrayId = identifierStack.pop();
+                arrayPosition = positionStack.pop();
 
                 indexType = typeStack.pop();
                 if (indexType != SemanticTable.INT) {
@@ -734,21 +814,21 @@ public class Semantico implements Constants {
                             getTypeName(indexType), token.getPosition());
                 }
 
-                verifyArrayDeclaredAndPushType(id, position);
+                verifyArrayDeclaredAndPushType(arrayId, arrayPosition);
 
                 gera_cod("STO", "1000");
 
                 if (inAssignmentContext) {
                     isArray = true;
-                    identifierStack.push(id);
-                    positionStack.push(position);
+                    identifierStack.push(arrayId);
+                    positionStack.push(arrayPosition);
                     lastIndex = "1000";
                 } else {
                     gera_cod("LD", "1000");
                     gera_cod("STO", "$indr");
-                    gera_cod("LDV", id);
-                    symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
-                    checkIfInitialized(id, position);
+                    gera_cod("LDV", token.getLexeme());
+                    symbolTable.markAsUsed(arrayId, symbolTable.getCurrentScope());
+                    checkIfInitialized(arrayId, arrayPosition);
                 }
                 break;
 
