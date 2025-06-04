@@ -274,7 +274,7 @@ PARENTESES_ESQUERDO : "("
           | TRUE #102
           | FALSE #103
           | ID #79
-          | ID COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
+          | ID #104 COLCHETE_ESQUERDO <Expr> #80 COLCHETE_DIREITO #81
           | PARENTESES_ESQUERDO <Expr> #82 PARENTESES_DIREITO #83
           | <FunctionCall> #84 ; 
 
