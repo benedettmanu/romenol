@@ -11,6 +11,8 @@ public class Semantico implements Constants {
     private final Stack<Integer> positionStack = new Stack<>();
     private final Stack<Integer> operatorStack = new Stack<>();
     private final Stack<String> scopeStack = new Stack<>();
+    private Stack<String> operandStack = new Stack<>();
+    private Stack<Boolean> constantStack = new Stack<>();
     private final StringBuilder codeGeneration;
     private int scopeCounter = 0;
     private boolean processingParameters = false;
@@ -116,6 +118,17 @@ public class Semantico implements Constants {
 
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
+
+                    if (!operandStack.isEmpty()) {
+                        String operand = operandStack.pop();
+                        boolean isConst = constantStack.pop();
+
+                        if (isConst) {
+                            gera_cod("LDI", operand);
+                        } else if (!"ACC".equals(operand)) {
+                            gera_cod("LD", operand);
+                        }
+                    }
 
                     if (isArray) {
                         gera_cod("LDI", lastIndex);
@@ -445,15 +458,60 @@ public class Semantico implements Constants {
                 break;
 
             case 67: // <Expr2> ::= <Expr2> OU_BIT <Expr3> #67
-                processOperatorExpression(SemanticTable.BOR);
+                //processOperatorExpression(SemanticTable.BOR);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                int rightType = typeStack.pop();
+                int leftType = typeStack.pop();
+
+                if (leftType != SemanticTable.INT || rightType != SemanticTable.INT) {
+                    throw new SemanticError("Operações bit a bit só são permitidas com tipos inteiros. " +
+                            "Encontrado: " + getTypeName(leftType) + " e " + getTypeName(rightType),
+                            token.getPosition());
+                }
+
+                gera_cod("OR", ""); // OR bit a bit
+                typeStack.push(SemanticTable.INT);
                 break;
 
             case 68: // <Expr3> ::= <Expr3> XOR_BIT <Expr4> #68
-                processOperatorExpression(SemanticTable.XOR);
+                //processOperatorExpression(SemanticTable.XOR);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+
+                if (leftType != SemanticTable.INT || rightType != SemanticTable.INT) {
+                    throw new SemanticError("Operações bit a bit só são permitidas com tipos inteiros. " +
+                            "Encontrado: " + getTypeName(leftType) + " e " + getTypeName(rightType),
+                            token.getPosition());
+                }
+
+                gera_cod("XOR", ""); // XOR bit a bit
+                typeStack.push(SemanticTable.INT);
                 break;
 
             case 69: // <Expr4> ::= <Expr4> E_BIT <Expr5> #69
-                processOperatorExpression(SemanticTable.BAND);
+                //processOperatorExpression(SemanticTable.BAND);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+
+                if (leftType != SemanticTable.INT || rightType != SemanticTable.INT) {
+                    throw new SemanticError("Operações bit a bit só são permitidas com tipos inteiros. " +
+                            "Encontrado: " + getTypeName(leftType) + " e " + getTypeName(rightType),
+                            token.getPosition());
+                }
+
+                gera_cod("AND", ""); // AND bit a bit
+                typeStack.push(SemanticTable.INT);
                 break;
 
             case 70: // <Expr5> ::= <Expr5> <RelOp> <Expr6> #70
@@ -461,20 +519,135 @@ public class Semantico implements Constants {
                 break;
 
             case 71: // <Expr6> ::= <Expr6> <ShiftOp> <Expr7> #71
-                processOperatorExpression(SemanticTable.SHL);
+                //processOperatorExpression(SemanticTable.SHL);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+                int op = operatorStack.isEmpty() ? SemanticTable.SHL : operatorStack.pop();
+
+                if (leftType != SemanticTable.INT || rightType != SemanticTable.INT) {
+                    throw new SemanticError("Operações de deslocamento só são permitidas com tipos inteiros. " +
+                            "Encontrado: " + getTypeName(leftType) + " e " + getTypeName(rightType),
+                            token.getPosition());
+                }
+
+                if (op == SemanticTable.SHL) {
+                    gera_cod("SLL", "");
+                } else if (op == SemanticTable.SHR) {
+                    gera_cod("SRL", "");
+                }
+
+                typeStack.push(SemanticTable.INT);
                 break;
 
             case 72: // <Expr7> ::= <Expr7> <AddOp> <Expr8> #72
-                processOperatorExpression(SemanticTable.SUM);
+                //processOperatorExpression(SemanticTable.SUM);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+                op = operatorStack.isEmpty() ? SemanticTable.SUM : operatorStack.pop();
+
+                int resultType = SemanticTable.resultType(leftType, rightType, op);
+                if (resultType == SemanticTable.ERR) {
+                    throw new SemanticError("Operação incompatível entre tipos " +
+                            getTypeName(leftType) + " e " + getTypeName(rightType) +
+                            " com operador " + getOperatorName(op), token.getPosition());
+                }
+
+                String rightOp = operandStack.pop();
+                boolean rightIsConst = constantStack.pop();
+                String leftOp = operandStack.pop();
+                boolean leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                if (op == SemanticTable.SUM) {
+                    if (rightIsConst) {
+                        gera_cod("ADDI", rightOp);
+                    } else {
+                        gera_cod("ADD", rightOp);
+                    }
+                } else if (op == SemanticTable.SUB) {
+                    if (rightIsConst) {
+                        gera_cod("SUBI", rightOp);
+                    } else {
+                        gera_cod("SUB", rightOp);
+                    }
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
+
+                typeStack.push(resultType);
                 break;
 
             case 73: // <Expr8> ::= <Expr8> <MulOp> <Expr9> #73
-                processOperatorExpression(SemanticTable.MUL);
+                //processOperatorExpression(SemanticTable.MUL);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+                op = operatorStack.isEmpty() ? SemanticTable.MUL : operatorStack.pop();
+
+                resultType = SemanticTable.resultType(leftType, rightType, op);
+                if (resultType == SemanticTable.ERR) {
+                    throw new SemanticError("Operação incompatível entre tipos " +
+                            getTypeName(leftType) + " e " + getTypeName(rightType) +
+                            " com operador " + getOperatorName(op), token.getPosition());
+                }
+
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                if (op == SemanticTable.MUL) {
+                    if (rightIsConst) {
+                        gera_cod("MULI", rightOp);
+                    } else {
+                        gera_cod("MUL", rightOp);
+                    }
+                } else if (op == SemanticTable.DIV) {
+                    if (rightIsConst) {
+                        gera_cod("DIVI", rightOp);
+                    } else {
+                        gera_cod("DIV", rightOp);
+                    }
+                } else if (op == SemanticTable.MOD) {
+                    if (rightIsConst) {
+                        gera_cod("MODI", rightOp);
+                    } else {
+                        gera_cod("MOD", rightOp);
+                    }
+                }
+
+                operandStack.push("ACC");
+                constantStack.push(false);
+
+                typeStack.push(resultType);
                 break;
 
             case 74: // <Expr9> ::= <UnOp> <Expr10> #74
                 int type = typeStack.pop();
-                int op = operatorStack.pop();
+                op = operatorStack.pop();
                 
                 boolean valid = false;
                 switch(op) {
@@ -501,7 +674,7 @@ public class Semantico implements Constants {
                 }
                 
                 typeStack.push(type);
-                break;                
+                break;
 
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
                 if (symbolTable.isArray()) {
@@ -513,7 +686,9 @@ public class Semantico implements Constants {
                     }
                 }
                 if (!isArray) {
-                    gera_cod("LDI", token.getLexeme());
+                    //gera_cod("LDI", token.getLexeme());
+                    operandStack.push(token.getLexeme());
+                    constantStack.push(true);
                 }
                 typeStack.push(SemanticTable.INT);
                 break;
@@ -537,7 +712,10 @@ public class Semantico implements Constants {
                 id = token.getLexeme();
                 position = token.getPosition();
                 verifyIdentifierDeclaredAndPushType(id, position);
-                gera_cod("LD", id);
+                //gera_cod("LD", id);
+
+                operandStack.push(id);
+                constantStack.push(false);
 
                 if (!inAssignmentContext) {
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
@@ -563,6 +741,7 @@ public class Semantico implements Constants {
                     isArray = true;
                     identifierStack.push(id);
                     positionStack.push(position);
+                    lastIndex = "1000";
                 } else {
                     gera_cod("LD", "1000");
                     gera_cod("STO", "$indr");
@@ -615,6 +794,7 @@ public class Semantico implements Constants {
             case 95: // <ShiftOp> ::= SHIFT_ESQUERDA #95
                 operatorStack.push(SemanticTable.SHL);
                 break;
+
             case 96: // <ShiftOp> ::= SHIFT_DIREITA #96
                 operatorStack.push(SemanticTable.SHR);
                 break;
