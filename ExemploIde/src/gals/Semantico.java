@@ -251,6 +251,7 @@ public class Semantico implements Constants {
                 break;
 
             case 16: // <ArrayIDList> ::= <Variable> #16 | <ArrayIDList> , <Variable> #16
+                isArray = false;
                 if (!identifierStack.isEmpty()) {
                     String id = identifierStack.pop();
                     int position = positionStack.pop();
