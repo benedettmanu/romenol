@@ -53,6 +53,7 @@ public class Semantico implements Constants {
             case 2: // | ID #2 COLCHETE_ESQUERDO <Expr> #14 COLCHETE_DIREITO #15
                 identifierStack.push(token.getLexeme());
                 positionStack.push(token.getPosition());
+                isArray = true;
                 break;
 
             case 3: // <Declaration> ::= <Type> <ArrayIDList> #3
@@ -471,37 +472,35 @@ public class Semantico implements Constants {
                 processOperatorExpression(SemanticTable.MUL);
                 break;
 
-                case 74: // <Expr9> ::= <UnOp> <Expr10> #74
-                {
-                    int type = typeStack.pop();
-                    int op = operatorStack.pop();
+            case 74: // <Expr9> ::= <UnOp> <Expr10> #74
+                int type = typeStack.pop();
+                int op = operatorStack.pop();
                 
-                    boolean valid = false;
-                    switch(op) {
-                        case SemanticTable.SUB:
-                            valid = (type == SemanticTable.INT || type == SemanticTable.FLO);
-                            break;
-                        case SemanticTable.BNOT:
-                            valid = (type == SemanticTable.INT);
-                            break;
-                        case SemanticTable.LNOT:
-                            valid = (type == SemanticTable.BOO);
-                            break;
-                        case SemanticTable.BAND:
-                            valid = (type == SemanticTable.INT);
-                            break;
-                        default:
-                            valid = false;
-                            break;
-                    }
-                
-                    if (!valid) {
-                        throw new SemanticError("Operador unário incompatível com o tipo " +
-                                getTypeName(type), token.getPosition());
-                    }
-                
-                    typeStack.push(type);
+                boolean valid = false;
+                switch(op) {
+                    case SemanticTable.SUB:
+                        valid = (type == SemanticTable.INT || type == SemanticTable.FLO);
+                        break;
+                    case SemanticTable.BNOT:
+                        valid = (type == SemanticTable.INT);
+                        break;
+                    case SemanticTable.LNOT:
+                        valid = (type == SemanticTable.BOO);
+                        break;
+                    case SemanticTable.BAND:
+                        valid = (type == SemanticTable.INT);
+                        break;
+                    default:
+                        valid = false;
+                        break;
                 }
+
+                if (!valid) {
+                   throw new SemanticError("Operador unário incompatível com o tipo " +
+                           getTypeName(type), token.getPosition());
+                }
+                
+                typeStack.push(type);
                 break;                
 
             case 75: // <Expr10> ::= LITERAL_INTEIRO #75
@@ -513,8 +512,8 @@ public class Semantico implements Constants {
                         symbolTable.setArraySize(1);
                     }
                 }
-                if (!isArray){
-                    //gera_cod("LDI", token.getLexeme());//precisa descomentar
+                if (!isArray) {
+                    gera_cod("LDI", token.getLexeme());
                 }
                 typeStack.push(SemanticTable.INT);
                 break;
