@@ -606,17 +606,10 @@ public class Semantico implements Constants {
                 }
 
                 if (op == SemanticTable.SHL) {
-                    if (rightIsConst) {
-                        gera_cod("SLLI", rightOp);
-                    } else {
-                        gera_cod("SLL", rightOp);
-                    }
+                    gera_cod("SLL", rightOp);
+
                 } else if (op == SemanticTable.SHR) {
-                    if (rightIsConst) {
-                        gera_cod("SRLI", rightOp);
-                    } else {
-                        gera_cod("SRL", rightOp);
-                    }
+                    gera_cod("SRL", rightOp);
                 }
 
                 operandStack.push("ACC");
