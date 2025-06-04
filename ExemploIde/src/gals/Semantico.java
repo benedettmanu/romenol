@@ -17,8 +17,8 @@ public class Semantico implements Constants {
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
     private boolean inAssignmentContext = false;
-    private boolean isArrayAssignment = false;
-    private String currentArrayId = null;
+    private boolean isArray = false;
+    private String lastIndex;
 
     public Semantico() {
         scopeStack.push("global");
@@ -53,10 +53,6 @@ public class Semantico implements Constants {
             case 2: // | ID #2 COLCHETE_ESQUERDO <Expr> #14 COLCHETE_DIREITO #15
                 identifierStack.push(token.getLexeme());
                 positionStack.push(token.getPosition());
-                if (inAssignmentContext) {
-                    isArrayAssignment = true;
-                    currentArrayId = token.getLexeme();
-                }
                 break;
 
             case 3: // <Declaration> ::= <Type> <ArrayIDList> #3
@@ -95,7 +91,7 @@ public class Semantico implements Constants {
                 inDeclarationContext = true;
                 break;
 
-            case 10: // <Assignment> ::= <Variable> <RelOp> <Expr> #10
+            case 10: // <Variable> <RelOp> #105 <Expr> #10
                 inAssignmentContext = true;
                 if (!identifierStack.isEmpty()) {
                     String id = identifierStack.pop();
@@ -120,14 +116,16 @@ public class Semantico implements Constants {
                     symbolTable.markAsUsed(id, symbolTable.getCurrentScope());
                     symbolTable.markAsInitialized(id, symbolTable.getCurrentScope());
 
-                    if (isArrayAssignment) {
+                    if (isArray) {
+                        gera_cod("LDI", lastIndex);
+                        gera_cod("STO", "1000");
+                        gera_cod("LDI", token.getLexeme());
                         gera_cod("STO", "1001");
                         gera_cod("LD", "1000");
                         gera_cod("STO", "$indr");
                         gera_cod("LD", "1001");
                         gera_cod("STOV", id);
-                        isArrayAssignment = false;
-                        currentArrayId = null;
+                        isArray = false;
                     } else {
                         gera_cod("STO", id);
                     }
@@ -215,9 +213,11 @@ public class Semantico implements Constants {
                 break;
 
             case 14: // ID COLCHETE_ESQUERDO <Expr> #14
+                isArray = true;
                 try {
                     int size = Integer.parseInt(token.getLexeme());
                     symbolTable.setArraySize(size);
+                    lastIndex = token.getLexeme();
                 } catch (NumberFormatException e) {
                     symbolTable.setArraySize(1);
                 }
@@ -513,22 +513,24 @@ public class Semantico implements Constants {
                         symbolTable.setArraySize(1);
                     }
                 }
-                gera_cod("LDI", token.getLexeme());
+                if (!isArray){
+                    //gera_cod("LDI", token.getLexeme());//precisa descomentar
+                }
                 typeStack.push(SemanticTable.INT);
                 break;
 
             case 76: // <Expr10> ::= LITERAL_STRING_CARACTER #76
-                gera_cod("LDI", "'" + token.getLexeme() + "'");
+                //gera_cod("LDI", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.STR);
                 break;
 
             case 77: // <Expr10> ::= LITERAL_CARACTER #77
-                gera_cod("LDI", "'" + token.getLexeme() + "'");
+                //gera_cod("LDI", "'" + token.getLexeme() + "'");
                 typeStack.push(SemanticTable.CHA);
                 break;
 
             case 78: // <Expr10> ::= LITERAL_REAL #78
-                gera_cod("LDI", token.getLexeme());
+                //gera_cod("LDI", token.getLexeme());
                 typeStack.push(SemanticTable.FLO);
                 break;
 
@@ -559,8 +561,7 @@ public class Semantico implements Constants {
                 gera_cod("STO", "1000");
 
                 if (inAssignmentContext) {
-                    isArrayAssignment = true;
-                    currentArrayId = id;
+                    isArray = true;
                     identifierStack.push(id);
                     positionStack.push(position);
                 } else {
@@ -650,6 +651,10 @@ public class Semantico implements Constants {
             case 104: // ID #104 COLCHETE_ESQUERDO <Expr> #48 COLCHETE_DIREITO #49
                 identifierStack.push(token.getLexeme());
                 positionStack.push(token.getPosition());
+                break;
+
+            case 105: // <Variable> <RelOp> #105 <Expr> #10
+                inAssignmentContext = true;
                 break;
 
             default:

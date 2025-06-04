@@ -6,7 +6,7 @@ ScannerName = Lexico
 ParserName = Sintatico
 SemanticName = Semantico
 ScannerCaseSensitive = true
-ScannerTable = Compact
+ScannerTable = Full
 Input = String
 Parser = SLR
 #RegularDefinitions
@@ -157,7 +157,7 @@ PARENTESES_ESQUERDO : "("
         | BOOL #8
         | VOID #9 ; 
 
-<Assignment> ::= <Variable> <RelOp> <Expr> #10
+<Assignment> ::= <Variable> <RelOp> #105 <Expr> #10
               | <Variable> <AddOp> <Expr> #11
               | <Variable> <MulOp> <Expr> #12 ;
 
