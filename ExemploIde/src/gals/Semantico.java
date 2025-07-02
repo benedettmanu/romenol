@@ -11,10 +11,13 @@ public class Semantico implements Constants {
     private final Stack<Integer> positionStack = new Stack<>();
     private final Stack<Integer> operatorStack = new Stack<>();
     private final Stack<String> scopeStack = new Stack<>();
+    private Stack<String> relOpStack = new Stack<>();
     private Stack<String> operandStack = new Stack<>();
     private Stack<Boolean> constantStack = new Stack<>();
+    private Stack<String> labelStack = new Stack<>();
     private final StringBuilder codeGeneration;
     private int scopeCounter = 0;
+    private int labelCounter = 0;
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
@@ -33,6 +36,10 @@ public class Semantico implements Constants {
         } else {
             codeGeneration.append("   ").append(instruction).append("\n");
         }
+    }
+
+    private String generateLabel() {
+        return "LABEL" + (++labelCounter);
     }
 
     public String getGeneratedCode() {
@@ -300,10 +307,21 @@ public class Semantico implements Constants {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
+
+                String fimIfLabel = "FIMSE" + (++labelCounter);
+                labelStack.push(fimIfLabel);
+
+                String relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
+                gera_cod(relOp, fimIfLabel);
+
                 enterNewScope("if");
                 break;
 
             case 22: // Final do bloco IF (já tratado no case 19/20)
+                if (!labelStack.isEmpty()) {
+                    fimIfLabel = labelStack.pop();
+                    gera_cod(fimIfLabel+":", "");
+                }
                 break;
             
             case 24: // SENAO <Block1> #24
@@ -575,7 +593,48 @@ public class Semantico implements Constants {
                 break;
 
             case 70: // <Expr5> ::= <Expr5> <RelOp> <Expr6> #70
-                processOperatorExpression(SemanticTable.REL);
+                if (typeStack.size() < 2) {
+                    throw new SemanticError("Erro na análise semântica: não há tipos suficientes na pilha", 0);
+                }
+
+                rightType = typeStack.pop();
+                leftType = typeStack.pop();
+                int op = operatorStack.isEmpty() ? SemanticTable.REL : operatorStack.pop();
+
+                int resultType = SemanticTable.resultType(leftType, rightType, op);
+                if (resultType == SemanticTable.ERR) {
+                    throw new SemanticError("Operação incompatível entre tipos " +
+                            getTypeName(leftType) + " e " + getTypeName(rightType) +
+                            " com operador relacional", token.getPosition());
+                }
+
+                rightOp = operandStack.pop();
+                rightIsConst = constantStack.pop();
+                leftOp = operandStack.pop();
+                leftIsConst = constantStack.pop();
+
+                if (leftIsConst) {
+                    gera_cod("LDI", leftOp);
+                } else {
+                    gera_cod("LD", leftOp);
+                }
+
+                gera_cod("STO", "1000");
+
+                if (rightIsConst) {
+                    gera_cod("LDI", rightOp);
+                } else {
+                    gera_cod("LD", rightOp);
+                }
+
+                gera_cod("STO", "1001");
+
+                gera_cod("LD", "1000");
+                gera_cod("SUB", "1001");
+
+                operandStack.push("ACC");
+                constantStack.push(false);
+                typeStack.push(SemanticTable.BOO);
                 break;
 
             case 71: // <Expr6> ::= <Expr6> <ShiftOp> <Expr7> #71
@@ -586,7 +645,7 @@ public class Semantico implements Constants {
 
                 rightType = typeStack.pop();
                 leftType = typeStack.pop();
-                int op = operatorStack.isEmpty() ? SemanticTable.SHL : operatorStack.pop();
+                op = operatorStack.isEmpty() ? SemanticTable.SHL : operatorStack.pop();
 
                 if (leftType != SemanticTable.INT || rightType != SemanticTable.INT) {
                     throw new SemanticError("Operações de deslocamento só são permitidas com tipos inteiros. " +
@@ -627,7 +686,7 @@ public class Semantico implements Constants {
                 leftType = typeStack.pop();
                 op = operatorStack.isEmpty() ? SemanticTable.SUM : operatorStack.pop();
 
-                int resultType = SemanticTable.resultType(leftType, rightType, op);
+                resultType = SemanticTable.resultType(leftType, rightType, op);
                 if (resultType == SemanticTable.ERR) {
                     throw new SemanticError("Operação incompatível entre tipos " +
                             getTypeName(leftType) + " e " + getTypeName(rightType) +
@@ -833,12 +892,33 @@ public class Semantico implements Constants {
                 break;
 
             case 85: // <RelOp> ::= MAIOR #85
+                operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BLE");
+                break;
+
             case 86: // <RelOp> ::= MENOR #86
+                operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BGE");
+                break;
+
             case 87: // <RelOp> ::= MAIOR_IGUAL #87
+                operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BLT");
+                break;
+
             case 88: // <RelOp> ::= MENOR_IGUAL #88
+                operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BGT");
+                break;
+
             case 89: // <RelOp> ::= IGUAL #89
+                operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BNE");
+                break;
+
             case 90: // <RelOp> ::= DIFERENTE #90
                 operatorStack.push(SemanticTable.REL);
+                relOpStack.push("BEQ");
                 break;
 
             case 91: // <RelOp> ::= RESULTADO #91 (operador =)
