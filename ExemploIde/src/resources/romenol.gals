@@ -6,7 +6,7 @@ ScannerName = Lexico
 ParserName = Sintatico
 SemanticName = Semantico
 ScannerCaseSensitive = true
-ScannerTable = Compact
+ScannerTable = Full
 Input = String
 Parser = SLR
 #RegularDefinitions
@@ -196,7 +196,7 @@ PARENTESES_ESQUERDO : "("
 
 <ReturnStatement> ::= RETURN <Expr> #25 ; 
 
-<WhileLoop> ::= ENQUANTO PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27 ; 
+<WhileLoop> ::= ENQUANTO #107 PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27 ; 
 
 <ForLoop> ::= PARA PARENTESES_ESQUERDO <Type> <Assignment> #28 PONTO_E_VIRGULA <Expr> #29 PONTO_E_VIRGULA <Assignment> #30 PARENTESES_DIREITO <Instruction> #31
             | PARA PARENTESES_ESQUERDO <Assignment> #32 PONTO_E_VIRGULA <Expr> #33 PONTO_E_VIRGULA <Assignment> #34 PARENTESES_DIREITO <Instruction> #35 ;

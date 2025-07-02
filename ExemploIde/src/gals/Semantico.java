@@ -17,7 +17,9 @@ public class Semantico implements Constants {
     private Stack<String> labelStack = new Stack<>();
     private final StringBuilder codeGeneration;
     private int scopeCounter = 0;
-    private int labelCounter = 0;
+    private int ifLabelCounter = 0;
+    private int whileLabelCounter = 0;
+
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
@@ -37,10 +39,6 @@ public class Semantico implements Constants {
         } else {
             codeGeneration.append("   ").append(instruction).append("\n");
         }
-    }
-
-    private String generateLabel() {
-        return "LABEL" + (++labelCounter);
     }
 
     public String getGeneratedCode() {
@@ -309,8 +307,8 @@ public class Semantico implements Constants {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
-                labelCounter++;
-                int currentLabel = labelCounter;
+                ifLabelCounter++;
+                int currentLabel = ifLabelCounter;
 
                 String elseLabel = "ELSE" + currentLabel;
                 String endLabel = "FIMSE" + currentLabel;
@@ -319,7 +317,7 @@ public class Semantico implements Constants {
                 labelStack.push(elseLabel);
 
                 String relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
-                gera_cod(relOp, elseLabel);
+                gera_cod(relOp, elseLabel); //precisa reconhecer quando é if e quando é if-else
 
                 enterNewScope("if");
                 break;
@@ -358,13 +356,31 @@ public class Semantico implements Constants {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
-                enterNewScope("while"); // Entra em novo escopo para o WHILE
+
+                String startLabel = labelStack.pop();
+                endLabel = labelStack.pop();
+                labelStack.push(startLabel);
+                labelStack.push(endLabel);
+
+                relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
+                gera_cod(relOp, "");
+                gera_cod(startLabel, "");
+
+                enterNewScope("while");
                 break;
 
-            case 27: // Final do while
+            case 27: // ENQUANTO #107 PARENTESES_ESQUERDO <Expr> #26 PARENTESES_DIREITO <Instruction> #27
                 exitCurrentScope();
+
+                String endLbl = labelStack.pop();
+                String startLbl = labelStack.pop();
+
+                gera_cod("JMP", "");
+                gera_cod(endLbl, "");
+                gera_cod(startLbl+":", "");
+
                 break;
-            
+
             case 28: // PARA - primeiro assignment no FOR
                 enterNewScope("for");
                 break;
@@ -1019,6 +1035,19 @@ public class Semantico implements Constants {
                     endLabel = labelStack.pop();
                     gera_cod(endLabel + ":", "");
                 }
+                break;
+
+            case 107: // <WhileLoop> ::= ENQUANTO #107
+                whileLabelCounter++;
+                currentLabel = whileLabelCounter;
+
+                String loopStartLabel = "INI_ENQ" + currentLabel;
+                String loopEndLabel = "FIMFACA" + currentLabel;
+
+                labelStack.push(loopStartLabel);
+                labelStack.push(loopEndLabel);
+
+                gera_cod(loopStartLabel + ":", "");
                 break;
 
             default:
