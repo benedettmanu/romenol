@@ -20,13 +20,17 @@ public class Semantico implements Constants {
     private int ifLabelCounter = 0;
     private int whileLabelCounter = 0;
     private int doWhileLabelCounter = 0;
+    private int forLabelCounter = 0;
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
     private boolean inAssignmentContext = false;
     private boolean isArray = false;
     private boolean hasElse = false;
+    private boolean inForCondition = false;
+    private String forLeftOp;
     private String lastIndex;
+
 
     public Semantico() {
         scopeStack.push("global");
@@ -332,7 +336,7 @@ public class Semantico implements Constants {
                     }
                 }
                 break;
-            
+
             case 24: // SENAO <Block1> #24
                 hasElse = true;
 
@@ -375,23 +379,62 @@ public class Semantico implements Constants {
                 String startLbl = labelStack.pop();
 
                 gera_cod("JMP", endLbl);
-                gera_cod(startLbl+":", "");
+                gera_cod(startLbl + ":", "");
 
                 break;
 
             case 28: // PARA - primeiro assignment no FOR
                 enterNewScope("for");
                 break;
-            
+
             case 31: // Final do FOR (primeiro tipo)
                 exitCurrentScope(); // Sai do escopo do for
                 break;
-            
-            case 32: // PARA - assignment no FOR (segundo tipo)
+
+            case 32: // PARA PARENTESES_ESQUERDO <Assignment> #32
+                inForCondition = true;
+                forLabelCounter++;
+                currentLabel = forLabelCounter;
+                String loopStartLabel = "PARA" + currentLabel;
+                String loopEndLabel = "FIMPARA" + currentLabel;
+                labelStack.push(loopStartLabel);
+                labelStack.push(loopEndLabel);
                 enterNewScope("for");
                 break;
-            
-            case 35: // Final do FOR (segundo tipo)
+
+            case 33: // PARA PARENTESES_ESQUERDO <Assignment> #32 PONTO_E_VIRGULA <Expr> #33
+                inForCondition = false;
+
+                gera_cod("LDI", "1"); // deve ser dinâmico
+                gera_cod("STO", "1001");
+
+                startLabel = labelStack.get(labelStack.size()-2);
+                endLabel = labelStack.get(labelStack.size()-1);
+
+                gera_cod("LD", forLeftOp);
+                gera_cod(startLabel + ":", "");
+                gera_cod("SUB", "1000");
+                relOp = relOpStack.isEmpty() ? "BEQ" : invertRelOp(relOpStack.pop());
+                gera_cod(relOp, endLabel);
+                break;
+
+            case 34: // PARENTESES_ESQUERDO <Assignment> #32 PONTO_E_VIRGULA <Expr> #33 PONTO_E_VIRGULA <Assignment> #34
+                break;
+
+            case 35: // PARA PARENTESES_ESQUERDO <Assignment> #32 PONTO_E_VIRGULA <Expr> #33 PONTO_E_VIRGULA <Assignment> #34 PARENTESES_DIREITO <Instruction> #35
+                startLabel = labelStack.get(labelStack.size() - 2);
+                endLabel = labelStack.get(labelStack.size() - 1);
+
+                gera_cod("LD", "a");
+                gera_cod("ADD", "1001");
+                gera_cod("STO", "a");
+
+                gera_cod("JMP", startLabel);
+
+                gera_cod(endLabel + ":", "");
+
+                labelStack.pop();
+                labelStack.pop();
                 exitCurrentScope();
                 break;
 
@@ -673,24 +716,35 @@ public class Semantico implements Constants {
                 leftOp = operandStack.pop();
                 leftIsConst = constantStack.pop();
 
-                if (leftIsConst) {
-                    gera_cod("LDI", leftOp);
+                if (inForCondition) {
+                    forLeftOp = leftOp;
+
+                    if (rightIsConst) {
+                        gera_cod("LDI", rightOp);
+                    } else {
+                        gera_cod("LD", rightOp);
+                    }
+                    gera_cod("STO", "1000");
                 } else {
-                    gera_cod("LD", leftOp);
+                    if (leftIsConst) {
+                        gera_cod("LDI", leftOp);
+                    } else {
+                        gera_cod("LD", leftOp);
+                    }
+
+                    gera_cod("STO", "1000");
+
+                    if (rightIsConst) {
+                        gera_cod("LDI", rightOp);
+                    } else {
+                        gera_cod("LD", rightOp);
+                    }
+
+                    gera_cod("STO", "1001");
+
+                    gera_cod("LD", "1000");
+                    gera_cod("SUB", "1001");
                 }
-
-                gera_cod("STO", "1000");
-
-                if (rightIsConst) {
-                    gera_cod("LDI", rightOp);
-                } else {
-                    gera_cod("LD", rightOp);
-                }
-
-                gera_cod("STO", "1001");
-
-                gera_cod("LD", "1000");
-                gera_cod("SUB", "1001");
 
                 operandStack.push("ACC");
                 constantStack.push(false);
@@ -1061,8 +1115,8 @@ public class Semantico implements Constants {
                 whileLabelCounter++;
                 currentLabel = whileLabelCounter;
 
-                String loopStartLabel = "INI_ENQ" + currentLabel;
-                String loopEndLabel = "FIMFACA" + currentLabel;
+                loopStartLabel = "INI_ENQ" + currentLabel;
+                loopEndLabel = "FIMFACA" + currentLabel;
 
                 labelStack.push(loopStartLabel);
                 labelStack.push(loopEndLabel);
