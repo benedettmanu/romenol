@@ -30,6 +30,8 @@ public class Semantico implements Constants {
     private boolean inForCondition = false;
     private String forLeftOp;
     private String lastIndex;
+    private String currentFunction;
+    private String currentFunctionCall;
 
 
     public Semantico() {
@@ -530,20 +532,32 @@ public class Semantico implements Constants {
                 gera_cod("STO", "$out_port");
                 break;
 
-            case 56: // FUNCAO <Type> ID #56 ...
+            case 56: // FUNCAO <Type> ID #56 PARENTESES_ESQUERDO <OptionalParameters> PARENTESES_DIREITO <Block1> #57
                 try {
                     symbolTable.addSymbol(token.getLexeme(), SymbolTable.FUNCTION, token.getPosition());
+
+                    String functionName = token.getLexeme().toUpperCase();
+                    String functionLabel = "_" + functionName;
+
+                    currentFunction = token.getLexeme();
+
+                    gera_cod(functionLabel + ":", "");
+
                     enterNewScope("func_" + token.getLexeme());
                     processingParameters = true;
+
                 } catch (SemanticError e) {
                     throw new SemanticError(e.getMessage(), token.getPosition());
                 }
                 break;
 
             case 57: // ... <Block1> #57 (end of function)
+                gera_cod("RETURN", "0");
+
                 exitCurrentScope();
                 processingParameters = false;
                 processingArrayParameter = false;
+                currentFunction = null;
                 break;
 
             case 58: // <Parameter> ::= <Type> <Variable> #58
@@ -574,6 +588,22 @@ public class Semantico implements Constants {
             case 60: // <FunctionCall> ::= ID #60 PARENTESES_ESQUERDO <OptionalArgumentList> #61 PARENTESES_DIREITO #62
                 verifyFunctionDeclared(token.getLexeme(), token.getPosition());
                 symbolTable.markAsUsed(token.getLexeme(), "global");
+
+                currentFunctionCall = token.getLexeme();
+                break;
+
+            case 61: // <OptionalArgumentList> #61
+                break;
+
+            case 62: // PARENTESES_DIREITO #62
+                if (currentFunctionCall != null) {
+                    String functionName = currentFunctionCall.toUpperCase();
+                    String functionLabel = "_" + functionName;
+
+                    gera_cod("CALL", functionLabel);
+
+                    currentFunctionCall = null;
+                }
                 break;
 
             case 65: // <Expr> ::= <Expr> OU_LOGICO <Expr1> #65
