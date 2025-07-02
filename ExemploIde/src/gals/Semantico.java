@@ -23,6 +23,7 @@ public class Semantico implements Constants {
     private boolean inDeclarationContext = false;
     private boolean inAssignmentContext = false;
     private boolean isArray = false;
+    private boolean hasElse = false;
     private String lastIndex;
 
     public Semantico() {
@@ -302,29 +303,52 @@ public class Semantico implements Constants {
                 break;
 
             case 21: // SE PARENTESES_ESQUERDO <Expr> #21 PARENTESES_DIREITO <Block1> #22
+                hasElse = false;
                 int exprType = typeStack.pop();
                 if (exprType != SemanticTable.BOO) {
                     throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
                             getTypeName(exprType), token.getPosition());
                 }
+                labelCounter++;
+                int currentLabel = labelCounter;
 
-                String fimIfLabel = "FIMSE" + (++labelCounter);
-                labelStack.push(fimIfLabel);
+                String elseLabel = "ELSE" + currentLabel;
+                String endLabel = "FIMSE" + currentLabel;
+
+                labelStack.push(endLabel);
+                labelStack.push(elseLabel);
 
                 String relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
-                gera_cod(relOp, fimIfLabel);
+                gera_cod(relOp, elseLabel);
 
                 enterNewScope("if");
                 break;
 
-            case 22: // Final do bloco IF (já tratado no case 19/20)
-                if (!labelStack.isEmpty()) {
-                    fimIfLabel = labelStack.pop();
-                    gera_cod(fimIfLabel+":", "");
+            case 23:
+                if (!hasElse) {
+                    if (!labelStack.isEmpty()) {
+                        elseLabel = labelStack.pop();
+                        endLabel = labelStack.pop();
+
+                        gera_cod(endLabel + ":", "");
+                    }
                 }
                 break;
             
             case 24: // SENAO <Block1> #24
+                hasElse = true;
+
+                if (!labelStack.isEmpty()) {
+                    elseLabel = labelStack.pop();
+                    endLabel = labelStack.pop();
+
+                    gera_cod("JMP", endLabel);
+
+                    gera_cod(elseLabel + ":", "");
+
+                    labelStack.push(endLabel);
+                }
+
                 enterNewScope("else");
                 break;
 
@@ -988,6 +1012,13 @@ public class Semantico implements Constants {
 
             case 105: // <Variable> <RelOp> #105 <Expr> #10
                 inAssignmentContext = true;
+                break;
+
+            case 106:
+                if (!labelStack.isEmpty()) {
+                    endLabel = labelStack.pop();
+                    gera_cod(endLabel + ":", "");
+                }
                 break;
 
             default:
