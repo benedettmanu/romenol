@@ -19,7 +19,7 @@ public class Semantico implements Constants {
     private int scopeCounter = 0;
     private int ifLabelCounter = 0;
     private int whileLabelCounter = 0;
-
+    private int doWhileLabelCounter = 0;
     private boolean processingParameters = false;
     private boolean processingArrayParameter = false;
     private boolean inDeclarationContext = false;
@@ -316,7 +316,7 @@ public class Semantico implements Constants {
                 labelStack.push(endLabel);
                 labelStack.push(elseLabel);
 
-                String relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
+                String relOp = relOpStack.isEmpty() ? "BEQ" : invertRelOp(relOpStack.pop());
                 gera_cod(relOp, elseLabel); //precisa reconhecer quando é if e quando é if-else
 
                 enterNewScope("if");
@@ -362,9 +362,8 @@ public class Semantico implements Constants {
                 labelStack.push(startLabel);
                 labelStack.push(endLabel);
 
-                relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
-                gera_cod(relOp, "");
-                gera_cod(startLabel, "");
+                relOp = relOpStack.isEmpty() ? "BEQ" : invertRelOp(relOpStack.pop());
+                gera_cod(relOp, startLabel);
 
                 enterNewScope("while");
                 break;
@@ -375,8 +374,7 @@ public class Semantico implements Constants {
                 String endLbl = labelStack.pop();
                 String startLbl = labelStack.pop();
 
-                gera_cod("JMP", "");
-                gera_cod(endLbl, "");
+                gera_cod("JMP", endLbl);
                 gera_cod(startLbl+":", "");
 
                 break;
@@ -396,12 +394,34 @@ public class Semantico implements Constants {
             case 35: // Final do FOR (segundo tipo)
                 exitCurrentScope();
                 break;
-            
-            case 36: // FACA no DO-WHILE
+
+            case 36: // <DoWhileLoop> ::= FACA #36
+                doWhileLabelCounter++;
+
+                String doWhile = "REPITA" + doWhileLabelCounter;
+
+                labelStack.push(doWhile);
+
+                gera_cod(doWhile + ":", "");
+
                 enterNewScope("dowhile");
                 break;
-            
-            case 38: // Final do DO-WHILE
+
+            case 37: // FACA #36 <Instruction> ENQUANTO PARENTESES_ESQUERDO <Expr> #37
+                exprType = typeStack.pop();
+                if (exprType != SemanticTable.BOO) {
+                    throw new SemanticError("Expressão condicional deve ser do tipo booleano, encontrado: " +
+                            getTypeName(exprType), token.getPosition());
+                }
+
+                doWhile = labelStack.pop();
+
+                relOp = relOpStack.isEmpty() ? "BEQ" : relOpStack.pop();
+                gera_cod(relOp, doWhile);
+
+                break;
+
+            case 38:
                 exitCurrentScope();
                 break;
 
@@ -933,32 +953,32 @@ public class Semantico implements Constants {
 
             case 85: // <RelOp> ::= MAIOR #85
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BLE");
+                relOpStack.push("BGT");
                 break;
 
             case 86: // <RelOp> ::= MENOR #86
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BGE");
+                relOpStack.push("BLT");
                 break;
 
             case 87: // <RelOp> ::= MAIOR_IGUAL #87
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BLT");
+                relOpStack.push("BGE");
                 break;
 
             case 88: // <RelOp> ::= MENOR_IGUAL #88
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BGT");
+                relOpStack.push("BLE");
                 break;
 
             case 89: // <RelOp> ::= IGUAL #89
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BNE");
+                relOpStack.push("BEQ");
                 break;
 
             case 90: // <RelOp> ::= DIFERENTE #90
                 operatorStack.push(SemanticTable.REL);
-                relOpStack.push("BEQ");
+                relOpStack.push("BNE");
                 break;
 
             case 91: // <RelOp> ::= RESULTADO #91 (operador =)
@@ -1052,6 +1072,19 @@ public class Semantico implements Constants {
 
             default:
                 break;
+        }
+    }
+
+    private String invertRelOp(String op) {
+        switch (op) {
+            case "BGT": return "BLE"; // >  → <=
+            case "BLT": return "BGE"; // <  → >=
+            case "BGE": return "BLT"; // >= → <
+            case "BLE": return "BGT"; // <= → >
+            case "BEQ": return "BNE"; // == → !=
+            case "BNE": return "BEQ"; // != → ==
+            default:
+                return "BEQ";
         }
     }
 
